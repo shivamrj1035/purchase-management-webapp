@@ -5,12 +5,12 @@ const nextConfig: NextConfig = {
     turbo: undefined,
   },
   productionBrowserSourceMaps: false,
-  // Remove standalone output for now to fix build
-  // output: 'standalone',
   // Optimize images
   images: {
     domains: ['firebasestorage.googleapis.com'],
   },
+  // Disable static page generation optimization for App Router compatibility
+  staticPageGenerationTimeout: 1000,
   // Security headers
   async headers() {
     return [

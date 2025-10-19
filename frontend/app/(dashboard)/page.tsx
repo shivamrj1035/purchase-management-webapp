@@ -23,9 +23,6 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/emiCalculator";
 
-// Disable static generation for this page
-export const dynamic = "force-dynamic";
-
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const router = useRouter();
