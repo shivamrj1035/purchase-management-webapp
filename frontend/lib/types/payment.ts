@@ -2,6 +2,24 @@
  * Payment type definitions
  */
 
+// Incoming Payment (EMI Payment)
+export interface Payment {
+  id: string;
+  fundingSourceId: string;
+  fundingSourceName: string;
+  monthNumber?: number;
+  paymentDate: Date;
+  dueDate: Date;
+  amount: number;
+  status: "paid" | "pending" | "overdue";
+  paymentMethod?: string;
+  transactionId?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Outgoing Payment
 export interface OutgoingPayment {
   id: string;
   category:

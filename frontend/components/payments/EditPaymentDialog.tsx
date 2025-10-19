@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Payment } from "@/app/(dashboard)/incoming-payments/page";
+import { Payment } from "@/lib/types/payment";
 
 interface EditPaymentDialogProps {
   open: boolean;

@@ -39,26 +39,11 @@ import {
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils/emiCalculator";
 import { syncEMIPayments } from "@/lib/utils/emiManager";
+import { Payment } from "@/lib/types/payment";
 import AddPaymentDialog from "@/components/payments/AddPaymentDialog";
 import EditPaymentDialog from "@/components/payments/EditPaymentDialog";
 import MarkAsPaidDialog from "@/components/payments/MarkAsPaidDialog";
 import { SendNotificationDialog } from "@/components/payments/SendNotificationDialog";
-
-export interface Payment {
-  id: string;
-  fundingSourceId: string;
-  fundingSourceName: string;
-  monthNumber?: number;
-  paymentDate: Date;
-  dueDate: Date;
-  amount: number;
-  status: "paid" | "pending" | "overdue";
-  paymentMethod?: string;
-  transactionId?: string;
-  notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export default function IncomingPaymentsPage() {
   const { user } = useAuthStore();

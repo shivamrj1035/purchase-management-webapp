@@ -12,15 +12,16 @@ load_dotenv()
 
 # Create FastAPI app
 app = FastAPI(
-    title="Housing Management API",
+    title="Property Purchase Management API",
     version="1.0.0",
-    description="API for managing home buying financial journey",
-    docs_url="/docs" if os.getenv("DEBUG") == "True" else None,
-    redoc_url="/redoc" if os.getenv("DEBUG") == "True" else None,
+    description="API for managing property purchase financial journey",
+    docs_url="/docs",  # Always enable docs for production debugging
+    redoc_url="/redoc",
 )
 
 # Configure CORS
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
+allowed_origins_str = os.getenv("CORS_ORIGINS") or os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001")
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -48,9 +49,10 @@ except Exception as e:
 @app.get("/")
 async def root():
     return {
-        "message": "Housing Management API",
+        "message": "Property Purchase Management API",
         "status": "running",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "environment": os.getenv("ENVIRONMENT", "development")
     }
 
 # Health check endpoint
@@ -58,15 +60,18 @@ async def root():
 async def health_check():
     return {
         "status": "healthy",
-        "service": "Housing Management API"
+        "service": "Property Purchase Management API",
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "version": "1.0.0"
     }
 
 # API info endpoint
 @app.get("/api/info")
 async def api_info():
     return {
-        "name": "Housing Management API",
+        "name": "Property Purchase Management API",
         "version": "1.0.0",
+        "environment": os.getenv("ENVIRONMENT", "development"),
         "endpoints": {
             "docs": "/docs",
             "health": "/health",
