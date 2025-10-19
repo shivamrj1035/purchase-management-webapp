@@ -137,11 +137,14 @@ export function SendNotificationDialog({
         status: emi.status,
       }));
 
+      // Get API URL from environment
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
       // Determine endpoint based on number of EMIs
       const endpoint =
         selectedEMIs.length === 1
-          ? "http://localhost:8000/api/notifications/send-emi-reminder"
-          : "http://localhost:8000/api/notifications/send-bulk-emi-reminders";
+          ? `${apiUrl}/api/notifications/send-emi-reminder`
+          : `${apiUrl}/api/notifications/send-bulk-emi-reminders`;
 
       const requestBody =
         selectedEMIs.length === 1
