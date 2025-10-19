@@ -3,6 +3,7 @@
 import { Menu, Bell, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,10 +13,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/lib/store/authStore";
+import { useNotificationStore } from "@/lib/store/notificationStore";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 interface TopNavProps {
   onMenuClick?: () => void;
@@ -23,7 +26,15 @@ interface TopNavProps {
 
 export function TopNav({ onMenuClick }: TopNavProps) {
   const { user, logout } = useAuthStore();
+  const { unreadCount, loadNotifications } = useNotificationStore();
   const router = useRouter();
+
+  // Load notifications on mount
+  useEffect(() => {
+    if (user?.userId) {
+      loadNotifications(user.userId);
+    }
+  }, [user, loadNotifications]);
 
   const handleLogout = async () => {
     try {
@@ -63,9 +74,17 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           variant="ghost"
           size="icon"
           className="relative text-slate-400 hover:text-white"
+          onClick={() => router.push("/dashboard/notifications")}
         >
           <Bell className="h-5 w-5" />
-          <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full" />
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+            >
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </Badge>
+          )}
         </Button>
 
         <DropdownMenu>

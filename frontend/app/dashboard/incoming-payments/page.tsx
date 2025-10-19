@@ -32,6 +32,8 @@ import {
   Filter,
   RefreshCw,
   AlertCircle,
+  Mail,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils/emiCalculator";
@@ -39,6 +41,7 @@ import { syncEMIPayments } from "@/lib/utils/emiManager";
 import AddPaymentDialog from "@/components/payments/AddPaymentDialog";
 import EditPaymentDialog from "@/components/payments/EditPaymentDialog";
 import MarkAsPaidDialog from "@/components/payments/MarkAsPaidDialog";
+import { SendNotificationDialog } from "@/components/payments/SendNotificationDialog";
 
 export interface Payment {
   id: string;
@@ -67,7 +70,11 @@ export default function IncomingPaymentsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isMarkPaidDialogOpen, setIsMarkPaidDialogOpen] = useState(false);
+  const [isSendNotificationDialogOpen, setIsSendNotificationDialogOpen] =
+    useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [selectedEMIsForNotification, setSelectedEMIsForNotification] =
+    useState<Payment[]>([]);
   const [syncing, setSyncing] = useState(false);
 
   // Sync EMI payments on component mount
@@ -432,13 +439,27 @@ export default function IncomingPaymentsPage() {
       {upcomingPayments.length > 0 && (
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader>
-            <CardTitle className="text-white flex items-center">
-              <Calendar className="h-5 w-5 mr-2 text-blue-400" />
-              Upcoming Payments (Next 30 Days)
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              {upcomingPayments.length} payment(s) due soon
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-white flex items-center">
+                  <Calendar className="h-5 w-5 mr-2 text-blue-400" />
+                  Upcoming Payments (Next 30 Days)
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  {upcomingPayments.length} payment(s) due soon
+                </CardDescription>
+              </div>
+              <Button
+                onClick={() => {
+                  setSelectedEMIsForNotification(upcomingPayments);
+                  setIsSendNotificationDialogOpen(true);
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Send Email Reminder
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -482,17 +503,31 @@ export default function IncomingPaymentsPage() {
                         <span>Due: {formatDate(payment.dueDate)}</span>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setSelectedPayment(payment);
-                        setIsMarkPaidDialogOpen(true);
-                      }}
-                      className="bg-emerald-500 hover:bg-emerald-600"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Mark as Paid
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedEMIsForNotification([payment]);
+                          setIsSendNotificationDialogOpen(true);
+                        }}
+                        className="border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white"
+                      >
+                        <Send className="h-4 w-4 mr-1" />
+                        Send Reminder
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPayment(payment);
+                          setIsMarkPaidDialogOpen(true);
+                        }}
+                        className="bg-emerald-500 hover:bg-emerald-600"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Mark as Paid
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
@@ -686,6 +721,22 @@ export default function IncomingPaymentsPage() {
           />
         </>
       )}
+      <SendNotificationDialog
+        open={isSendNotificationDialogOpen}
+        onOpenChange={setIsSendNotificationDialogOpen}
+        selectedEMIs={selectedEMIsForNotification.map((p) => ({
+          id: p.id,
+          fundingSourceName: p.fundingSourceName,
+          monthNumber: p.monthNumber || 0,
+          amount: p.amount,
+          dueDate: p.dueDate,
+          status: p.status,
+        }))}
+        onSuccess={() => {
+          toast.success("Notification sent successfully!");
+          setSelectedEMIsForNotification([]);
+        }}
+      />
     </div>
   );
 }

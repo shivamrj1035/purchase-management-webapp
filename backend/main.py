@@ -37,6 +37,13 @@ try:
 except Exception as e:
     print(f"⚠️ Could not load auth routes: {e}")
 
+try:
+    from routers.notifications import router as notifications_router
+    app.include_router(notifications_router, prefix="/api")
+    print("✅ Notification routes loaded")
+except Exception as e:
+    print(f"⚠️ Could not load notification routes: {e}")
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -66,6 +73,8 @@ async def api_info():
             "auth_me": "/api/auth/me",
             "auth_verify": "/api/auth/verify-token",
             "auth_status": "/api/auth/status",
+            "notifications": "/api/notifications",
+            "notification_health": "/api/notifications/health",
         },
         "status": "running"
     }
