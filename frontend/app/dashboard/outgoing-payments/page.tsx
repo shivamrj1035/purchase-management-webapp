@@ -30,7 +30,6 @@ import {
   DollarSign,
   IndianRupee,
   AlertTriangle,
-  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils/emiCalculator";
@@ -59,7 +58,8 @@ export interface OutgoingPayment {
 
 export default function OutgoingPaymentsPage() {
   const { user } = useAuthStore();
-  const { propertyDetails, getTotalCost } = usePropertyStore();
+  const { propertyDetails, loadPropertyDetails, getTotalCost } =
+    usePropertyStore();
   const [payments, setPayments] = useState<OutgoingPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
@@ -67,6 +67,13 @@ export default function OutgoingPaymentsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] =
     useState<OutgoingPayment | null>(null);
+
+  // Load property details on mount
+  useEffect(() => {
+    if (user?.userId) {
+      loadPropertyDetails(user.userId);
+    }
+  }, [user?.userId, loadPropertyDetails]);
 
   const fetchPayments = async () => {
     const userId = user?.userId || "dev-user";
@@ -263,25 +270,23 @@ export default function OutgoingPaymentsPage() {
         <Card className="bg-amber-900/20 border-amber-800">
           <CardContent className="pt-6">
             <div className="flex items-start gap-4">
-              <Settings className="h-6 w-6 text-amber-500 mt-1" />
+              <AlertTriangle className="h-6 w-6 text-amber-500 mt-1" />
               <div className="flex-1">
                 <h3 className="font-semibold text-amber-200 mb-1">
-                  Configure Property Details
+                  Property Configuration Required
                 </h3>
                 <p className="text-sm text-amber-300 mb-3">
-                  Set your property purchase price and fees to accurately track
-                  pending payments. The system will automatically calculate the
-                  remaining amount based on payments made.
+                  Set your property purchase price and fees in the Purchase
+                  Config section to enable accurate pending payment tracking.
                 </p>
                 <Button
                   onClick={() => {
-                    // TODO: Add property details configuration dialog
-                    toast.info("Property configuration coming soon!");
+                    window.location.href = "/dashboard/purchase-config";
                   }}
                   className="bg-amber-600 hover:bg-amber-700"
                 >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Configure Property Details
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Go to Purchase Config
                 </Button>
               </div>
             </div>

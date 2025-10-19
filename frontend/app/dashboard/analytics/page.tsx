@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuthStore } from "@/lib/store/authStore";
+import { usePropertyStore } from "@/lib/store/propertyStore";
 import {
   Card,
   CardContent,
@@ -31,13 +32,9 @@ import {
 
 export default function AnalyticsPage() {
   const { user } = useAuthStore();
+  const { propertyDetails, loadPropertyDetails, getTotalCost } =
+    usePropertyStore();
   const [loading, setLoading] = useState(true);
-  const [propertyDetails, setPropertyDetails] = useState({
-    purchasePrice: 0,
-    registrationAmount: 0,
-    stampDuty: 0,
-    legalFees: 0,
-  });
   const [analytics, setAnalytics] = useState({
     totalFunding: 0,
     totalEMI: 0,
@@ -52,29 +49,19 @@ export default function AnalyticsPage() {
     contributionCount: 0,
   });
 
+  // Load property details on mount
+  useEffect(() => {
+    if (user?.userId) {
+      loadPropertyDetails(user.userId);
+    }
+  }, [user?.userId, loadPropertyDetails]);
+
   useEffect(() => {
     const fetchAnalytics = async () => {
       const userId = user?.userId || "dev-user";
 
       try {
         setLoading(true);
-
-        // Fetch property details
-        try {
-          const propertyRef = doc(db, "users", userId, "settings", "property");
-          const propertyDoc = await getDoc(propertyRef);
-          if (propertyDoc.exists()) {
-            const data = propertyDoc.data();
-            setPropertyDetails({
-              purchasePrice: data.purchasePrice || 0,
-              registrationAmount: data.registrationAmount || 0,
-              stampDuty: data.stampDuty || 0,
-              legalFees: data.legalFees || 0,
-            });
-          }
-        } catch (error) {
-          console.log("No property details found");
-        }
 
         // Fetch funding sources
         const fundingRef = collection(db, "users", userId, "fundingSources");
@@ -163,24 +150,15 @@ export default function AnalyticsPage() {
   }, [user]);
 
   // Calculate derived metrics
-  const totalPropertyCost =
-    propertyDetails.purchasePrice +
-    propertyDetails.registrationAmount +
-    propertyDetails.stampDuty +
-    propertyDetails.legalFees;
+  const totalPropertyCost = getTotalCost();
+  const purchasePrice = propertyDetails?.purchasePrice || 0;
   const fundingProgress =
-    propertyDetails.purchasePrice > 0
-      ? (analytics.totalFunding / propertyDetails.purchasePrice) * 100
-      : 0;
+    purchasePrice > 0 ? (analytics.totalFunding / purchasePrice) * 100 : 0;
   const paymentProgress =
-    propertyDetails.purchasePrice > 0
-      ? (analytics.totalPaid / propertyDetails.purchasePrice) * 100
-      : 0;
+    purchasePrice > 0 ? (analytics.totalPaid / purchasePrice) * 100 : 0;
   const totalRepaymentAmount = analytics.totalFunding + analytics.totalInterest;
   const debtToPropertyRatio =
-    propertyDetails.purchasePrice > 0
-      ? (analytics.totalFunding / propertyDetails.purchasePrice) * 100
-      : 0;
+    purchasePrice > 0 ? (analytics.totalFunding / purchasePrice) * 100 : 0;
 
   const categoryLabels: Record<string, string> = {
     bank_loan: "Bank Loan",
@@ -212,7 +190,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Property Purchase Analysis - Enhanced Section */}
-      {propertyDetails.purchasePrice > 0 && (
+      {propertyDetails && propertyDetails.purchasePrice > 0 && (
         <>
           {/* Property Overview Card */}
           <Card className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 border-indigo-500/20">
@@ -234,7 +212,7 @@ export default function AnalyticsPage() {
                     <span>Purchase Price</span>
                   </div>
                   <p className="text-2xl font-bold text-white">
-                    {formatCurrency(propertyDetails.purchasePrice)}
+                    {formatCurrency(purchasePrice)}
                   </p>
                 </div>
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-blue-500/20">
@@ -268,10 +246,7 @@ export default function AnalyticsPage() {
                   </div>
                   <p className="text-2xl font-bold text-amber-400">
                     {formatCurrency(
-                      Math.max(
-                        0,
-                        propertyDetails.purchasePrice - analytics.totalFunding
-                      )
+                      Math.max(0, purchasePrice - analytics.totalFunding)
                     )}
                   </p>
                   <p className="text-xs text-slate-400 mt-1">to arrange</p>
@@ -440,25 +415,25 @@ export default function AnalyticsPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-400">Purchase Price</span>
                   <span className="text-lg font-bold text-white">
-                    {formatCurrency(propertyDetails.purchasePrice)}
+                    {formatCurrency(purchasePrice)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-400">Registration</span>
                   <span className="text-lg font-bold text-violet-400">
-                    {formatCurrency(propertyDetails.registrationAmount)}
+                    {formatCurrency(propertyDetails?.registrationFees || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-400">Stamp Duty</span>
                   <span className="text-lg font-bold text-purple-400">
-                    {formatCurrency(propertyDetails.stampDuty)}
+                    {formatCurrency(propertyDetails?.stampDuty || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-400">Legal Fees</span>
                   <span className="text-lg font-bold text-pink-400">
-                    {formatCurrency(propertyDetails.legalFees)}
+                    {formatCurrency(propertyDetails?.legalFees || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-slate-700">

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
+import { usePropertyStore } from "@/lib/store/propertyStore";
 import {
   Card,
   CardContent,
@@ -26,29 +27,29 @@ import { formatCurrency } from "@/lib/utils/emiCalculator";
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const router = useRouter();
+  const { propertyDetails, loadPropertyDetails, getTotalCost } =
+    usePropertyStore();
   const [stats, setStats] = useState({
     totalFunding: 0,
     totalExpenses: 0,
     netPosition: 0,
-    purchasePrice: 0,
   });
+  const [loading, setLoading] = useState(true);
+
+  const purchasePrice = getTotalCost();
+
+  useEffect(() => {
+    if (user?.userId) {
+      loadPropertyDetails(user.userId);
+    }
+  }, [user?.userId, loadPropertyDetails]);
 
   useEffect(() => {
     const fetchStats = async () => {
       const userId = user?.userId || "dev-user";
 
       try {
-        // Fetch property purchase price
-        let purchasePrice = 0;
-        try {
-          const propertyRef = doc(db, "users", userId, "settings", "property");
-          const propertyDoc = await getDoc(propertyRef);
-          if (propertyDoc.exists()) {
-            purchasePrice = propertyDoc.data().purchasePrice || 0;
-          }
-        } catch (error) {
-          console.log("No property details found");
-        }
+        setLoading(true);
         // Fetch funding sources
         const fundingRef = collection(db, "users", userId, "fundingSources");
         const fundingSnapshot = await getDocs(fundingRef);
@@ -69,10 +70,11 @@ export default function DashboardPage() {
           totalFunding,
           totalExpenses,
           netPosition: totalFunding - totalExpenses,
-          purchasePrice,
         });
       } catch (error) {
         console.error("Error fetching stats:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -90,7 +92,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Purchase Progress Card */}
-      {stats.purchasePrice > 0 && (
+      {purchasePrice > 0 && (
         <Card className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20">
           <CardHeader>
             <CardTitle className="text-white">
@@ -105,7 +107,7 @@ export default function DashboardPage() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-400">Target Amount</span>
                 <span className="text-lg font-bold text-white">
-                  {formatCurrency(stats.purchasePrice)}
+                  {formatCurrency(purchasePrice)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -128,13 +130,13 @@ export default function DashboardPage() {
                 </span>
                 <span
                   className={`text-lg font-bold ${
-                    stats.purchasePrice - stats.totalFunding > 0
+                    purchasePrice - stats.totalFunding > 0
                       ? "text-amber-400"
                       : "text-emerald-400"
                   }`}
                 >
                   {formatCurrency(
-                    Math.max(0, stats.purchasePrice - stats.totalFunding)
+                    Math.max(0, purchasePrice - stats.totalFunding)
                   )}
                 </span>
               </div>
@@ -147,7 +149,7 @@ export default function DashboardPage() {
                 <span className="text-white font-semibold">
                   {Math.min(
                     100,
-                    Math.round((stats.totalFunding / stats.purchasePrice) * 100)
+                    Math.round((stats.totalFunding / purchasePrice) * 100)
                   )}
                   %
                 </span>
@@ -158,7 +160,7 @@ export default function DashboardPage() {
                   style={{
                     width: `${Math.min(
                       100,
-                      (stats.totalFunding / stats.purchasePrice) * 100
+                      (stats.totalFunding / purchasePrice) * 100
                     )}%`,
                   }}
                 />
@@ -172,9 +174,7 @@ export default function DashboardPage() {
                 <span className="text-white font-semibold">
                   {Math.min(
                     100,
-                    Math.round(
-                      (stats.totalExpenses / stats.purchasePrice) * 100
-                    )
+                    Math.round((stats.totalExpenses / purchasePrice) * 100)
                   )}
                   %
                 </span>
@@ -185,14 +185,14 @@ export default function DashboardPage() {
                   style={{
                     width: `${Math.min(
                       100,
-                      (stats.totalExpenses / stats.purchasePrice) * 100
+                      (stats.totalExpenses / purchasePrice) * 100
                     )}%`,
                   }}
                 />
               </div>
             </div>
 
-            {stats.totalFunding >= stats.purchasePrice && (
+            {stats.totalFunding >= purchasePrice && (
               <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
                 <p className="text-sm text-emerald-400 font-semibold text-center">
                   🎉 Congratulations! You have arranged full funding for the

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuthStore } from "@/lib/store/authStore";
+import { usePropertyStore } from "@/lib/store/propertyStore";
 import {
   Card,
   CardContent,
@@ -71,6 +72,8 @@ interface IncomingPayment {
 
 export default function ReportsPage() {
   const { user } = useAuthStore();
+  const { propertyDetails, loadPropertyDetails, getTotalCost } =
+    usePropertyStore();
   const [loading, setLoading] = useState(true);
   const [fundingSources, setFundingSources] = useState<FundingSource[]>([]);
   const [outgoingPayments, setOutgoingPayments] = useState<OutgoingPayment[]>(
@@ -79,12 +82,13 @@ export default function ReportsPage() {
   const [incomingPayments, setIncomingPayments] = useState<IncomingPayment[]>(
     []
   );
-  const [propertyDetails, setPropertyDetails] = useState({
-    purchasePrice: 0,
-    registrationAmount: 0,
-    stampDuty: 0,
-    legalFees: 0,
-  });
+
+  // Load property details on mount
+  useEffect(() => {
+    if (user?.userId) {
+      loadPropertyDetails(user.userId);
+    }
+  }, [user?.userId, loadPropertyDetails]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,23 +96,6 @@ export default function ReportsPage() {
 
       try {
         setLoading(true);
-
-        // Fetch property details
-        try {
-          const propertyRef = doc(db, "users", userId, "settings", "property");
-          const propertyDoc = await getDoc(propertyRef);
-          if (propertyDoc.exists()) {
-            const data = propertyDoc.data();
-            setPropertyDetails({
-              purchasePrice: data.purchasePrice || 0,
-              registrationAmount: data.registrationAmount || 0,
-              stampDuty: data.stampDuty || 0,
-              legalFees: data.legalFees || 0,
-            });
-          }
-        } catch (error) {
-          console.log("No property details found");
-        }
 
         // Fetch funding sources
         const fundingRef = collection(db, "users", userId, "fundingSources");
@@ -151,14 +138,13 @@ export default function ReportsPage() {
   }, [user]);
 
   // Calculate summary statistics
+  const purchasePrice = propertyDetails?.purchasePrice || 0;
+  const totalPropertyCost = getTotalCost();
+
   const summary = {
     // Property Related
-    purchasePrice: propertyDetails.purchasePrice,
-    totalPropertyCosts:
-      propertyDetails.purchasePrice +
-      propertyDetails.registrationAmount +
-      propertyDetails.stampDuty +
-      propertyDetails.legalFees,
+    purchasePrice,
+    totalPropertyCosts: totalPropertyCost,
     // Funding Related
     totalFunding: fundingSources.reduce((sum, f) => sum + f.principalAmount, 0),
     totalEMI: fundingSources
@@ -401,25 +387,25 @@ export default function ReportsPage() {
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <p className="text-xs text-slate-400">Registration</p>
-                  <p className="text-sm font-semibold text-white">
-                    {formatCurrency(propertyDetails.registrationAmount)}
+                  <p className="text-sm text-slate-400">Registration Fees</p>
+                  <p className="text-white font-semibold">
+                    {formatCurrency(propertyDetails?.registrationFees || 0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Stamp Duty</p>
-                  <p className="text-sm font-semibold text-white">
-                    {formatCurrency(propertyDetails.stampDuty)}
+                  <p className="text-sm text-slate-400">Stamp Duty</p>
+                  <p className="text-white font-semibold">
+                    {formatCurrency(propertyDetails?.stampDuty || 0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Legal Fees</p>
-                  <p className="text-sm font-semibold text-white">
-                    {formatCurrency(propertyDetails.legalFees)}
+                  <p className="text-sm text-slate-400">Legal Fees</p>
+                  <p className="text-white font-semibold">
+                    {formatCurrency(propertyDetails?.legalFees || 0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">Total Costs</p>
+                  <p className="text-sm text-slate-400">Total Costs</p>
                   <p className="text-sm font-semibold text-purple-400">
                     {formatCurrency(summary.totalPropertyCosts)}
                   </p>

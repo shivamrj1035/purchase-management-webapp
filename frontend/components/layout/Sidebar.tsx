@@ -10,6 +10,7 @@ import {
   BarChart3,
   FileText,
   Settings,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,11 @@ const navItems: NavItem[] = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Purchase Config",
+    href: "/dashboard/purchase-config",
+    icon: Building2,
   },
   {
     title: "Funding Sources",

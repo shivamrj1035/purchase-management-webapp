@@ -14,13 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/lib/store/authStore";
-import {
-  Settings as SettingsIcon,
-  User,
-  Bell,
-  Database,
-  Home,
-} from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Database } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -31,46 +25,6 @@ export default function SettingsPage() {
     phoneNumber: user?.phoneNumber || "",
     homeAddress: user?.homeAddress || "",
   });
-
-  const [propertyData, setPropertyData] = useState({
-    purchasePrice: "",
-    propertyAddress: "",
-    propertyType: "apartment",
-    registrationAmount: "",
-    stampDuty: "",
-    legalFees: "",
-  });
-
-  // Fetch property details
-  useEffect(() => {
-    const fetchPropertyDetails = async () => {
-      if (!user) return;
-      try {
-        const propertyRef = doc(
-          db,
-          "users",
-          user.userId,
-          "settings",
-          "property"
-        );
-        const propertyDoc = await getDoc(propertyRef);
-        if (propertyDoc.exists()) {
-          const data = propertyDoc.data();
-          setPropertyData({
-            purchasePrice: data.purchasePrice?.toString() || "",
-            propertyAddress: data.propertyAddress || "",
-            propertyType: data.propertyType || "apartment",
-            registrationAmount: data.registrationAmount?.toString() || "",
-            stampDuty: data.stampDuty?.toString() || "",
-            legalFees: data.legalFees?.toString() || "",
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching property details:", error);
-      }
-    };
-    fetchPropertyDetails();
-  }, [user]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,171 +38,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveProperty = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    try {
-      const propertyRef = doc(db, "users", user.userId, "settings", "property");
-      await setDoc(propertyRef, {
-        purchasePrice: parseFloat(propertyData.purchasePrice) || 0,
-        propertyAddress: propertyData.propertyAddress,
-        propertyType: propertyData.propertyType,
-        registrationAmount: parseFloat(propertyData.registrationAmount) || 0,
-        stampDuty: parseFloat(propertyData.stampDuty) || 0,
-        legalFees: parseFloat(propertyData.legalFees) || 0,
-        updatedAt: new Date(),
-      });
-      toast.success("Property details saved successfully");
-    } catch (error) {
-      console.error("Error saving property details:", error);
-      toast.error("Failed to save property details");
-    }
-  };
-
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-white">Settings</h1>
         <p className="text-slate-400 mt-1">
-          Manage your account and preferences
+          Manage your account and application preferences
         </p>
       </div>
-
-      {/* Property Purchase Details */}
-      <Card className="bg-slate-900 border-slate-800">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center">
-            <Home className="h-5 w-5 mr-2" />
-            Property Purchase Details
-          </CardTitle>
-          <CardDescription className="text-slate-400">
-            Set your property purchase price and related costs
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSaveProperty} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="purchasePrice">
-                  Purchase Price (₹) <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="purchasePrice"
-                  type="number"
-                  value={propertyData.purchasePrice}
-                  onChange={(e) =>
-                    setPropertyData({
-                      ...propertyData,
-                      purchasePrice: e.target.value,
-                    })
-                  }
-                  className="bg-slate-800 border-slate-700 text-white"
-                  placeholder="e.g., 5000000"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="propertyType">Property Type</Label>
-                <select
-                  id="propertyType"
-                  value={propertyData.propertyType}
-                  onChange={(e) =>
-                    setPropertyData({
-                      ...propertyData,
-                      propertyType: e.target.value,
-                    })
-                  }
-                  className="w-full bg-slate-800 border-slate-700 text-white rounded-md px-3 py-2"
-                >
-                  <option value="apartment">Apartment</option>
-                  <option value="flat">Flat</option>
-                  <option value="independent_house">Independent House</option>
-                  <option value="plot">Plot/Land</option>
-                  <option value="shop">Shop</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="propertyAddress">Property Address</Label>
-                <Input
-                  id="propertyAddress"
-                  value={propertyData.propertyAddress}
-                  onChange={(e) =>
-                    setPropertyData({
-                      ...propertyData,
-                      propertyAddress: e.target.value,
-                    })
-                  }
-                  className="bg-slate-800 border-slate-700 text-white"
-                  placeholder="Enter property address"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="registrationAmount">
-                  Registration Amount (₹)
-                </Label>
-                <Input
-                  id="registrationAmount"
-                  type="number"
-                  value={propertyData.registrationAmount}
-                  onChange={(e) =>
-                    setPropertyData({
-                      ...propertyData,
-                      registrationAmount: e.target.value,
-                    })
-                  }
-                  className="bg-slate-800 border-slate-700 text-white"
-                  placeholder="e.g., 100000"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="stampDuty">Stamp Duty (₹)</Label>
-                <Input
-                  id="stampDuty"
-                  type="number"
-                  value={propertyData.stampDuty}
-                  onChange={(e) =>
-                    setPropertyData({
-                      ...propertyData,
-                      stampDuty: e.target.value,
-                    })
-                  }
-                  className="bg-slate-800 border-slate-700 text-white"
-                  placeholder="e.g., 250000"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="legalFees">Legal Fees (₹)</Label>
-                <Input
-                  id="legalFees"
-                  type="number"
-                  value={propertyData.legalFees}
-                  onChange={(e) =>
-                    setPropertyData({
-                      ...propertyData,
-                      legalFees: e.target.value,
-                    })
-                  }
-                  className="bg-slate-800 border-slate-700 text-white"
-                  placeholder="e.g., 50000"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-4">
-              <Button type="submit" className="bg-blue-500 hover:bg-blue-600">
-                Save Property Details
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
 
       {/* Profile Settings */}
       <Card className="bg-slate-900 border-slate-800">
