@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
     turbo: undefined,
   },
   productionBrowserSourceMaps: false,
-  // Output standalone for Docker deployments
-  output: 'standalone',
+  // Remove standalone output for now to fix build
+  // output: 'standalone',
   // Optimize images
   images: {
     domains: ['firebasestorage.googleapis.com'],
