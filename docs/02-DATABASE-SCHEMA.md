@@ -222,7 +222,7 @@ Tracks payments FROM user TO builders, authorities, and service providers
 - `stamp_duty` - Stamp duty charges
 - `legal` - Legal fees
 - `interior` - Interior/furnishing costs
-- `other` - Other miscellaneous expenses
+- `other` - Other miscellaneous payments
 
 **Example:**
 
@@ -452,8 +452,8 @@ These fields are calculated on-the-fly and not stored:
 ### For Dashboard:
 
 - **Total Funded**: `sum(principalAmount from all fundingSources)`
-- **Total Expenses**: `sum(amount from all outgoingPayments)`
-- **Net Position**: `Total Funded - Total Expenses`
+- **Total Payments**: `sum(amount from all outgoingPayments)`
+- **Net Position**: `Total Funded - Total Payments`
 - **Total Interest Paid**: `sum(interestAmount from paid incomingPayments)`
 
 ---

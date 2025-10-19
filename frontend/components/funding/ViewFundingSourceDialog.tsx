@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -29,7 +31,7 @@ import {
   formatDate,
   generateAmortizationSchedule,
 } from "@/lib/utils/emiCalculator";
-import { FundingSource } from "@/app/(dashboard)/funding-sources/page";
+import { FundingSource } from "@/app/dashboard/funding-sources/page";
 import {
   Calendar,
   TrendingUp,
@@ -37,6 +39,9 @@ import {
   Building2,
   FileText,
   IndianRupee,
+  User,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface ViewFundingSourceDialogProps {
@@ -50,10 +55,13 @@ export default function ViewFundingSourceDialog({
   onOpenChange,
   source,
 }: ViewFundingSourceDialogProps) {
+  const [currentPage, setCurrentPage] = useState(0);
   const isBankLoan = source.sourceType === "bank_loan";
+  const isPersonalLoan = source.sourceType === "personal_loan";
+  const isLoan = isBankLoan || isPersonalLoan;
 
-  // Generate amortization schedule for bank loans
-  const amortizationData = isBankLoan
+  // Generate amortization schedule for all loans
+  const amortizationData = isLoan
     ? generateAmortizationSchedule(
         source.principalAmount,
         source.interestRate,
@@ -61,6 +69,19 @@ export default function ViewFundingSourceDialog({
         source.startDate
       )
     : null;
+
+  // Pagination for amortization schedule
+  const ITEMS_PER_PAGE = 12;
+  const totalPages = amortizationData
+    ? Math.ceil(amortizationData.amortizationSchedule.length / ITEMS_PER_PAGE)
+    : 0;
+
+  const paginatedSchedule = amortizationData
+    ? amortizationData.amortizationSchedule.slice(
+        currentPage * ITEMS_PER_PAGE,
+        (currentPage + 1) * ITEMS_PER_PAGE
+      )
+    : [];
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -85,7 +106,7 @@ export default function ViewFundingSourceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-slate-900 border-slate-800 text-white w-full max-w-[95vw] lg:max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -138,23 +159,55 @@ export default function ViewFundingSourceDialog({
           </Card>
 
           {/* Bank Loan Details */}
-          {isBankLoan && (
+          {isLoan && (
             <>
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center">
-                    <Building2 className="h-5 w-5 mr-2" />
-                    Loan Details
+                    {isBankLoan ? (
+                      <>
+                        <Building2 className="h-5 w-5 mr-2" />
+                        Loan Details
+                      </>
+                    ) : (
+                      <>
+                        <User className="h-5 w-5 mr-2" />
+                        Personal Loan Details
+                      </>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-sm text-slate-400">Interest Rate</p>
+                      <p className="text-sm text-slate-400">Interest Type</p>
                       <p className="text-lg font-semibold text-white mt-1">
-                        {source.interestRate}% p.a.
+                        {source.interestType === "percentage"
+                          ? "Percentage"
+                          : source.interestType === "fixed_amount"
+                          ? "Fixed Amount"
+                          : "No Interest"}
                       </p>
                     </div>
+                    {source.interestType === "percentage" && (
+                      <div>
+                        <p className="text-sm text-slate-400">Interest Rate</p>
+                        <p className="text-lg font-semibold text-white mt-1">
+                          {source.interestRate}% p.a.
+                        </p>
+                      </div>
+                    )}
+                    {source.interestType === "fixed_amount" && (
+                      <div>
+                        <p className="text-sm text-slate-400">
+                          Monthly Interest
+                        </p>
+                        <p className="text-lg font-semibold text-white flex items-center mt-1">
+                          <IndianRupee className="h-4 w-4 mr-1" />
+                          {source.fixedInterestAmount || 0}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm text-slate-400">Tenure</p>
                       <p className="text-lg font-semibold text-white mt-1">
@@ -168,26 +221,55 @@ export default function ViewFundingSourceDialog({
                         {formatCurrency(source.emiAmount)}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm text-slate-400">Total Interest</p>
-                      <p className="text-lg font-semibold text-amber-500 flex items-center mt-1">
-                        <IndianRupee className="h-4 w-4 mr-1" />
-                        {amortizationData &&
-                          formatCurrency(amortizationData.totalInterest)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {source.bankName && (
-                    <div className="mt-4 pt-4 border-t border-slate-700">
-                      <div className="grid grid-cols-2 gap-4">
+                    {source.interestType === "percentage" &&
+                      amortizationData && (
                         <div>
-                          <p className="text-sm text-slate-400">Bank Name</p>
-                          <p className="text-sm text-white mt-1 flex items-center">
-                            <CreditCard className="h-4 w-4 mr-2" />
-                            {source.bankName}
+                          <p className="text-sm text-slate-400">
+                            Total Interest
+                          </p>
+                          <p className="text-lg font-semibold text-amber-500 flex items-center mt-1">
+                            <IndianRupee className="h-4 w-4 mr-1" />
+                            {formatCurrency(amortizationData.totalInterest)}
                           </p>
                         </div>
+                      )}
+                    {source.interestType === "fixed_amount" && (
+                      <div>
+                        <p className="text-sm text-slate-400">Total Interest</p>
+                        <p className="text-lg font-semibold text-amber-500 flex items-center mt-1">
+                          <IndianRupee className="h-4 w-4 mr-1" />
+                          {formatCurrency(
+                            (source.fixedInterestAmount || 0) *
+                              source.tenureMonths
+                          )}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {(source.bankName || source.lenderName) && (
+                    <div className="mt-4 pt-4 border-t border-slate-700">
+                      <div className="grid grid-cols-2 gap-4">
+                        {source.bankName && (
+                          <div>
+                            <p className="text-sm text-slate-400">Bank Name</p>
+                            <p className="text-sm text-white mt-1 flex items-center">
+                              <CreditCard className="h-4 w-4 mr-2" />
+                              {source.bankName}
+                            </p>
+                          </div>
+                        )}
+                        {source.lenderName && (
+                          <div>
+                            <p className="text-sm text-slate-400">
+                              Lender Name
+                            </p>
+                            <p className="text-sm text-white mt-1 flex items-center">
+                              <User className="h-4 w-4 mr-2" />
+                              {source.lenderName}
+                            </p>
+                          </div>
+                        )}
                         {source.accountNumber && (
                           <div>
                             <p className="text-sm text-slate-400">
@@ -208,74 +290,113 @@ export default function ViewFundingSourceDialog({
               {amortizationData && (
                 <Card className="bg-slate-800 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center">
-                      <TrendingUp className="h-5 w-5 mr-2" />
-                      Amortization Schedule
-                    </CardTitle>
-                    <CardDescription className="text-slate-400">
-                      First 12 months EMI breakdown
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg flex items-center">
+                          <TrendingUp className="h-5 w-5 mr-2" />
+                          Amortization Schedule
+                        </CardTitle>
+                        <CardDescription className="text-slate-400">
+                          {source.interestType === "fixed_amount"
+                            ? "Monthly fixed interest payments (Principal due at end)"
+                            : "Monthly EMI breakdown"}
+                        </CardDescription>
+                      </div>
+                      {totalPages > 1 && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setCurrentPage(Math.max(0, currentPage - 1))
+                            }
+                            disabled={currentPage === 0}
+                            className="border-slate-700 text-slate-300 hover:bg-slate-700"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm text-slate-400">
+                            Page {currentPage + 1} of {totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setCurrentPage(
+                                Math.min(totalPages - 1, currentPage + 1)
+                              )
+                            }
+                            disabled={currentPage === totalPages - 1}
+                            className="border-slate-700 text-slate-300 hover:bg-slate-700"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="rounded-md border border-slate-700 overflow-hidden">
+                    <div className="rounded-md border border-slate-700 overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-slate-900 hover:bg-slate-900">
-                            <TableHead className="text-slate-300">
+                            <TableHead className="text-slate-300 min-w-[80px]">
                               Month
                             </TableHead>
-                            <TableHead className="text-slate-300">
+                            <TableHead className="text-slate-300 min-w-[120px]">
                               Payment Date
                             </TableHead>
-                            <TableHead className="text-slate-300 text-right">
+                            <TableHead className="text-slate-300 text-right min-w-[120px]">
                               EMI Amount
                             </TableHead>
-                            <TableHead className="text-slate-300 text-right">
+                            <TableHead className="text-slate-300 text-right min-w-[120px]">
                               Principal
                             </TableHead>
-                            <TableHead className="text-slate-300 text-right">
+                            <TableHead className="text-slate-300 text-right min-w-[120px]">
                               Interest
                             </TableHead>
-                            <TableHead className="text-slate-300 text-right">
+                            <TableHead className="text-slate-300 text-right min-w-[120px]">
                               Balance
                             </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {amortizationData.amortizationSchedule
-                            .slice(0, 12)
-                            .map((row) => (
-                              <TableRow
-                                key={row.month}
-                                className="border-slate-700 hover:bg-slate-800/50"
-                              >
-                                <TableCell className="font-medium text-white">
-                                  {row.month}
-                                </TableCell>
-                                <TableCell className="text-slate-300">
-                                  {formatDate(row.paymentDate)}
-                                </TableCell>
-                                <TableCell className="text-right text-white">
-                                  {formatCurrency(row.emiAmount)}
-                                </TableCell>
-                                <TableCell className="text-right text-emerald-400">
-                                  {formatCurrency(row.principalPaid)}
-                                </TableCell>
-                                <TableCell className="text-right text-amber-400">
-                                  {formatCurrency(row.interestPaid)}
-                                </TableCell>
-                                <TableCell className="text-right text-slate-300">
-                                  {formatCurrency(row.principalBalance)}
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                          {paginatedSchedule.map((row) => (
+                            <TableRow
+                              key={row.month}
+                              className="border-slate-700 hover:bg-slate-800/50"
+                            >
+                              <TableCell className="font-medium text-white">
+                                {row.month}
+                              </TableCell>
+                              <TableCell className="text-slate-300">
+                                {formatDate(row.paymentDate)}
+                              </TableCell>
+                              <TableCell className="text-right text-white">
+                                {formatCurrency(row.emiAmount)}
+                              </TableCell>
+                              <TableCell className="text-right text-emerald-400">
+                                {formatCurrency(row.principalPaid)}
+                              </TableCell>
+                              <TableCell className="text-right text-amber-400">
+                                {formatCurrency(row.interestPaid)}
+                              </TableCell>
+                              <TableCell className="text-right text-slate-300">
+                                {formatCurrency(row.principalBalance)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
                         </TableBody>
                       </Table>
                     </div>
-                    {amortizationData.amortizationSchedule.length > 12 && (
+                    {totalPages > 1 && (
                       <p className="text-xs text-slate-400 mt-3 text-center">
-                        Showing first 12 months of{" "}
-                        {amortizationData.amortizationSchedule.length} total
+                        Showing months {currentPage * ITEMS_PER_PAGE + 1} -{" "}
+                        {Math.min(
+                          (currentPage + 1) * ITEMS_PER_PAGE,
+                          amortizationData.amortizationSchedule.length
+                        )}{" "}
+                        of {amortizationData.amortizationSchedule.length} total
                         months
                       </p>
                     )}

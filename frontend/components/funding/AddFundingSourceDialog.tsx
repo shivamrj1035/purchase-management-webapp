@@ -42,15 +42,19 @@ export default function AddFundingSourceDialog({
     sourceName: "",
     sourceType: "bank_loan" as
       | "bank_loan"
+      | "personal_loan"
       | "personal_contribution"
       | "family_support"
       | "other",
     principalAmount: "",
+    interestType: "percentage" as "percentage" | "fixed_amount" | "none",
     interestRate: "",
+    fixedInterestAmount: "",
     tenureMonths: "",
     startDate: new Date().toISOString().split("T")[0],
     status: "active" as "active" | "closed" | "pending",
     bankName: "",
+    lenderName: "",
     accountNumber: "",
     notes: "",
   });
@@ -69,12 +73,9 @@ export default function AddFundingSourceDialog({
       }
 
       const principal = parseFloat(formData.principalAmount);
-      const rate =
-        formData.sourceType === "bank_loan"
-          ? parseFloat(formData.interestRate)
-          : 0;
       const tenure =
-        formData.sourceType === "bank_loan"
+        formData.sourceType === "bank_loan" ||
+        formData.sourceType === "personal_loan"
           ? parseInt(formData.tenureMonths)
           : 0;
 
@@ -83,20 +84,40 @@ export default function AddFundingSourceDialog({
         return;
       }
 
-      if (formData.sourceType === "bank_loan") {
-        if (rate < 0 || tenure <= 0) {
-          toast.error(
-            "Please enter valid interest rate and tenure for bank loan"
-          );
+      let emiAmount = 0;
+      let rate = 0;
+
+      // Calculate EMI based on interest type
+      if (
+        formData.sourceType === "bank_loan" ||
+        formData.sourceType === "personal_loan"
+      ) {
+        if (tenure <= 0) {
+          toast.error("Please enter valid tenure");
           return;
         }
-      }
 
-      // Calculate EMI for bank loans
-      const emiAmount =
-        formData.sourceType === "bank_loan"
-          ? calculateEMI(principal, rate, tenure)
-          : 0;
+        if (formData.interestType === "percentage") {
+          rate = parseFloat(formData.interestRate);
+          if (rate < 0) {
+            toast.error("Please enter valid interest rate");
+            return;
+          }
+          emiAmount = calculateEMI(principal, rate, tenure);
+        } else if (formData.interestType === "fixed_amount") {
+          const fixedInterest = parseFloat(formData.fixedInterestAmount);
+          if (fixedInterest <= 0) {
+            toast.error("Please enter valid fixed interest amount");
+            return;
+          }
+          // For fixed interest, EMI = fixed interest per month
+          // Principal is paid at the end of tenure
+          emiAmount = fixedInterest;
+        } else {
+          // No interest - just principal divided by tenure
+          emiAmount = principal / tenure;
+        }
+      }
 
       // Create funding source
       const sourcesRef = collection(db, "users", user.userId, "fundingSources");
@@ -104,12 +125,18 @@ export default function AddFundingSourceDialog({
         sourceName: formData.sourceName,
         sourceType: formData.sourceType,
         principalAmount: principal,
+        interestType: formData.interestType,
         interestRate: rate,
+        fixedInterestAmount:
+          formData.interestType === "fixed_amount"
+            ? parseFloat(formData.fixedInterestAmount)
+            : 0,
         tenureMonths: tenure,
         emiAmount: emiAmount,
         startDate: Timestamp.fromDate(new Date(formData.startDate)),
         status: formData.status,
         bankName: formData.bankName || null,
+        lenderName: formData.lenderName || null,
         accountNumber: formData.accountNumber || null,
         notes: formData.notes || null,
         createdAt: Timestamp.now(),
@@ -125,11 +152,14 @@ export default function AddFundingSourceDialog({
         sourceName: "",
         sourceType: "bank_loan",
         principalAmount: "",
+        interestType: "percentage",
         interestRate: "",
+        fixedInterestAmount: "",
         tenureMonths: "",
         startDate: new Date().toISOString().split("T")[0],
         status: "active",
         bankName: "",
+        lenderName: "",
         accountNumber: "",
         notes: "",
       });
@@ -142,6 +172,8 @@ export default function AddFundingSourceDialog({
   };
 
   const isBankLoan = formData.sourceType === "bank_loan";
+  const isPersonalLoan = formData.sourceType === "personal_loan";
+  const needsInterest = isBankLoan || isPersonalLoan;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -185,6 +217,9 @@ export default function AddFundingSourceDialog({
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-700 text-white">
                 <SelectItem value="bank_loan">Bank Loan</SelectItem>
+                <SelectItem value="personal_loan">
+                  Personal Loan (Known Person)
+                </SelectItem>
                 <SelectItem value="personal_contribution">
                   Personal Contribution
                 </SelectItem>
@@ -213,10 +248,60 @@ export default function AddFundingSourceDialog({
             />
           </div>
 
-          {/* Bank Loan specific fields */}
-          {isBankLoan && (
+          {/* Loan specific fields (Bank or Personal) */}
+          {needsInterest && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              {/* Tenure */}
+              <div className="space-y-2">
+                <Label htmlFor="tenureMonths">
+                  Tenure (Months) <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="tenureMonths"
+                  type="number"
+                  placeholder="e.g., 240"
+                  value={formData.tenureMonths}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tenureMonths: e.target.value })
+                  }
+                  className="bg-slate-800 border-slate-700 text-white"
+                  required
+                />
+              </div>
+
+              {/* Interest Type */}
+              <div className="space-y-2">
+                <Label htmlFor="interestType">Interest Type</Label>
+                <Select
+                  value={formData.interestType}
+                  onValueChange={(value: any) =>
+                    setFormData({ ...formData, interestType: value })
+                  }
+                >
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                    <SelectItem value="percentage">
+                      Percentage (% p.a.)
+                    </SelectItem>
+                    <SelectItem value="fixed_amount">
+                      Fixed Amount (Monthly)
+                    </SelectItem>
+                    <SelectItem value="none">No Interest</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">
+                  {formData.interestType === "percentage" &&
+                    "Standard EMI with interest rate"}
+                  {formData.interestType === "fixed_amount" &&
+                    "Pay fixed interest monthly, principal at end"}
+                  {formData.interestType === "none" && "Interest-free loan"}
+                </p>
+              </div>
+
+              {/* Interest Rate (Percentage) */}
+              {formData.interestType === "percentage" && (
                 <div className="space-y-2">
                   <Label htmlFor="interestRate">
                     Interest Rate (% p.a.){" "}
@@ -235,50 +320,86 @@ export default function AddFundingSourceDialog({
                     required
                   />
                 </div>
+              )}
 
+              {/* Fixed Interest Amount */}
+              {formData.interestType === "fixed_amount" && (
                 <div className="space-y-2">
-                  <Label htmlFor="tenureMonths">
-                    Tenure (Months) <span className="text-red-500">*</span>
+                  <Label htmlFor="fixedInterestAmount">
+                    Fixed Monthly Interest (₹){" "}
+                    <span className="text-red-500">*</span>
                   </Label>
                   <Input
-                    id="tenureMonths"
+                    id="fixedInterestAmount"
                     type="number"
-                    placeholder="e.g., 240"
-                    value={formData.tenureMonths}
+                    step="0.01"
+                    placeholder="e.g., 200 or 500"
+                    value={formData.fixedInterestAmount}
                     onChange={(e) =>
-                      setFormData({ ...formData, tenureMonths: e.target.value })
+                      setFormData({
+                        ...formData,
+                        fixedInterestAmount: e.target.value,
+                      })
                     }
                     className="bg-slate-800 border-slate-700 text-white"
                     required
                   />
+                  <p className="text-xs text-slate-400">
+                    Principal amount will be paid at the end of tenure.
+                  </p>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="bankName">Bank Name</Label>
-                <Input
-                  id="bankName"
-                  placeholder="e.g., HDFC Bank"
-                  value={formData.bankName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, bankName: e.target.value })
-                  }
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
+              {/* Bank Name (for bank loans) */}
+              {isBankLoan && (
+                <div className="space-y-2">
+                  <Label htmlFor="bankName">Bank Name</Label>
+                  <Input
+                    id="bankName"
+                    placeholder="e.g., HDFC Bank"
+                    value={formData.bankName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, bankName: e.target.value })
+                    }
+                    className="bg-slate-800 border-slate-700 text-white"
+                  />
+                </div>
+              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="accountNumber">Account Number</Label>
-                <Input
-                  id="accountNumber"
-                  placeholder="e.g., XXXXXXXXX1234"
-                  value={formData.accountNumber}
-                  onChange={(e) =>
-                    setFormData({ ...formData, accountNumber: e.target.value })
-                  }
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
+              {/* Lender Name (for personal loans) */}
+              {isPersonalLoan && (
+                <div className="space-y-2">
+                  <Label htmlFor="lenderName">Lender Name</Label>
+                  <Input
+                    id="lenderName"
+                    placeholder="e.g., John Doe"
+                    value={formData.lenderName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, lenderName: e.target.value })
+                    }
+                    className="bg-slate-800 border-slate-700 text-white"
+                  />
+                </div>
+              )}
+
+              {/* Account Number (for bank loans) */}
+              {isBankLoan && (
+                <div className="space-y-2">
+                  <Label htmlFor="accountNumber">Account Number</Label>
+                  <Input
+                    id="accountNumber"
+                    placeholder="e.g., XXXXXXXXX1234"
+                    value={formData.accountNumber}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        accountNumber: e.target.value,
+                      })
+                    }
+                    className="bg-slate-800 border-slate-700 text-white"
+                  />
+                </div>
+              )}
             </>
           )}
 

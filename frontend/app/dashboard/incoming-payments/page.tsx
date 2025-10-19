@@ -30,16 +30,21 @@ import {
   Clock,
   XCircle,
   Filter,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils/emiCalculator";
+import { syncEMIPayments } from "@/lib/utils/emiManager";
 import AddPaymentDialog from "@/components/payments/AddPaymentDialog";
 import EditPaymentDialog from "@/components/payments/EditPaymentDialog";
+import MarkAsPaidDialog from "@/components/payments/MarkAsPaidDialog";
 
 export interface Payment {
   id: string;
   fundingSourceId: string;
   fundingSourceName: string;
+  monthNumber?: number;
   paymentDate: Date;
   dueDate: Date;
   amount: number;
@@ -61,7 +66,43 @@ export default function IncomingPaymentsPage() {
   );
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isMarkPaidDialogOpen, setIsMarkPaidDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  // Sync EMI payments on component mount
+  const handleSyncEMIPayments = async () => {
+    if (!user) return;
+
+    try {
+      setSyncing(true);
+      const result = await syncEMIPayments(user.userId);
+
+      const messages = [];
+      if (result.duplicatesRemoved > 0) {
+        messages.push(`Removed ${result.duplicatesRemoved} duplicate(s)`);
+      }
+      if (result.created > 0) {
+        messages.push(`Created ${result.created} new EMI(s)`);
+      }
+      if (result.updated > 0) {
+        messages.push(`Updated ${result.updated} to overdue`);
+      }
+
+      if (messages.length > 0) {
+        toast.success(`Synced! ${messages.join(", ")}`);
+      } else {
+        toast.info("All EMI payments are up to date");
+      }
+
+      await fetchData();
+    } catch (error) {
+      console.error("Error syncing EMI payments:", error);
+      toast.error("Failed to sync EMI payments");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Fetch funding sources and payments
   const fetchData = async () => {
@@ -83,13 +124,8 @@ export default function IncomingPaymentsPage() {
       }));
       setFundingSources(sources);
 
-      // Fetch payments
-      const paymentsRef = collection(
-        db,
-        "users",
-        user.userId,
-        "incomingPayments"
-      );
+      // Fetch payments from emiPayments collection
+      const paymentsRef = collection(db, "users", user.userId, "emiPayments");
       const paymentsSnapshot = await getDocs(paymentsRef);
 
       const paymentsData: Payment[] = paymentsSnapshot.docs.map((doc) => {
@@ -98,6 +134,7 @@ export default function IncomingPaymentsPage() {
           id: doc.id,
           fundingSourceId: data.fundingSourceId,
           fundingSourceName: data.fundingSourceName,
+          monthNumber: data.monthNumber,
           paymentDate: data.paymentDate?.toDate() || new Date(),
           dueDate: data.dueDate?.toDate() || new Date(),
           amount: data.amount,
@@ -132,9 +169,7 @@ export default function IncomingPaymentsPage() {
     }
 
     try {
-      await deleteDoc(
-        doc(db, "users", user.userId, "incomingPayments", paymentId)
-      );
+      await deleteDoc(doc(db, "users", user.userId, "emiPayments", paymentId));
       toast.success("Payment deleted successfully");
       fetchData();
     } catch (error) {
@@ -143,21 +178,23 @@ export default function IncomingPaymentsPage() {
     }
   };
 
-  // Mark as paid
-  const handleMarkAsPaid = async (payment: Payment) => {
-    if (!user) return;
+  // Mark as paid with payment method and notes
+  const handleMarkAsPaid = async (paymentMethod: string, notes: string) => {
+    if (!user || !selectedPayment) return;
 
     try {
       const paymentRef = doc(
         db,
         "users",
         user.userId,
-        "incomingPayments",
-        payment.id
+        "emiPayments",
+        selectedPayment.id
       );
       await updateDoc(paymentRef, {
         status: "paid",
         paymentDate: Timestamp.now(),
+        paymentMethod: paymentMethod,
+        notes: notes || null,
         updatedAt: Timestamp.now(),
       });
       toast.success("Payment marked as paid");
@@ -185,6 +222,24 @@ export default function IncomingPaymentsPage() {
     .filter((p) => p.status === "overdue")
     .reduce((sum, p) => sum + p.amount, 0);
 
+  // Get upcoming payments in next 30 days
+  const now = new Date();
+  const thirtyDaysFromNow = new Date();
+  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+  const upcomingPayments = payments
+    .filter(
+      (p) =>
+        (p.status === "pending" || p.status === "overdue") &&
+        p.dueDate >= now &&
+        p.dueDate <= thirtyDaysFromNow
+    )
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+
+  const overduePayments = payments
+    .filter((p) => p.status === "overdue")
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       paid: "bg-emerald-500/20 text-emerald-500 border-emerald-500/50",
@@ -208,19 +263,34 @@ export default function IncomingPaymentsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">EMI Payments</h1>
-          <p className="text-slate-400 mt-1">Track your loan EMI payments</p>
+          <p className="text-slate-400 mt-1">
+            Track your loan EMI payments (Auto-synced)
+          </p>
         </div>
-        <Button
-          onClick={() => setIsAddDialogOpen(true)}
-          className="bg-blue-500 hover:bg-blue-600"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Record Payment
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleSyncEMIPayments}
+            disabled={syncing}
+            variant="outline"
+            className="border-slate-700 text-slate-300 hover:bg-slate-800"
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`}
+            />
+            {syncing ? "Syncing..." : "Sync EMI Payments"}
+          </Button>
+          <Button
+            onClick={() => setIsAddDialogOpen(true)}
+            className="bg-blue-500 hover:bg-blue-600"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Record Manual Payment
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center">
@@ -271,7 +341,165 @@ export default function IncomingPaymentsPage() {
             </p>
           </CardContent>
         </Card>
+
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-400 flex items-center">
+              <Calendar className="h-4 w-4 mr-2 text-blue-500" />
+              Next 30 Days
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-500">
+              {upcomingPayments.length}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              {formatCurrency(
+                upcomingPayments.reduce((sum, p) => sum + p.amount, 0)
+              )}
+            </p>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Overdue Alerts */}
+      {overduePayments.length > 0 && (
+        <Card className="bg-red-900/20 border-red-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <AlertCircle className="h-5 w-5 mr-2 text-red-400" />
+              Overdue Payments - Action Required!
+            </CardTitle>
+            <CardDescription className="text-red-300">
+              You have {overduePayments.length} overdue payment(s) totaling{" "}
+              {formatCurrency(
+                overduePayments.reduce((sum, p) => sum + p.amount, 0)
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {overduePayments.map((payment) => {
+                const daysOverdue = Math.ceil(
+                  (now.getTime() - payment.dueDate.getTime()) /
+                    (1000 * 60 * 60 * 24)
+                );
+                return (
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-red-900/30 border border-red-800"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-semibold text-white">
+                          {payment.fundingSourceName}
+                        </h4>
+                        {payment.monthNumber && (
+                          <span className="text-xs text-red-300">
+                            Month {payment.monthNumber}
+                          </span>
+                        )}
+                        <span className="text-xs text-red-400">
+                          {daysOverdue} day(s) overdue
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 mt-1 text-sm text-red-200">
+                        <span>Amount: {formatCurrency(payment.amount)}</span>
+                        <span>•</span>
+                        <span>Due: {formatDate(payment.dueDate)}</span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPayment(payment);
+                        setIsMarkPaidDialogOpen(true);
+                      }}
+                      className="bg-emerald-500 hover:bg-emerald-600"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Pay Now
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Upcoming Payments in Next 30 Days */}
+      {upcomingPayments.length > 0 && (
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <Calendar className="h-5 w-5 mr-2 text-blue-400" />
+              Upcoming Payments (Next 30 Days)
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              {upcomingPayments.length} payment(s) due soon
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {upcomingPayments.map((payment) => {
+                const daysUntilDue = Math.ceil(
+                  (payment.dueDate.getTime() - now.getTime()) /
+                    (1000 * 60 * 60 * 24)
+                );
+                return (
+                  <div
+                    key={payment.id}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      daysUntilDue <= 7
+                        ? "bg-amber-900/20 border border-amber-800"
+                        : "bg-slate-800 border border-slate-700"
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-semibold text-white">
+                          {payment.fundingSourceName}
+                        </h4>
+                        {payment.monthNumber && (
+                          <span className="text-xs text-slate-500">
+                            Month {payment.monthNumber}
+                          </span>
+                        )}
+                        <span
+                          className={`text-xs ${
+                            daysUntilDue <= 7
+                              ? "text-amber-400"
+                              : "text-blue-400"
+                          }`}
+                        >
+                          Due in {daysUntilDue} day(s)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 mt-1 text-sm text-slate-400">
+                        <span>Amount: {formatCurrency(payment.amount)}</span>
+                        <span>•</span>
+                        <span>Due: {formatDate(payment.dueDate)}</span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPayment(payment);
+                        setIsMarkPaidDialogOpen(true);
+                      }}
+                      className="bg-emerald-500 hover:bg-emerald-600"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Mark as Paid
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filter Tabs */}
       <Card className="bg-slate-900 border-slate-800">
@@ -362,6 +590,11 @@ export default function IncomingPaymentsPage() {
                       <h3 className="text-lg font-semibold text-white">
                         {payment.fundingSourceName}
                       </h3>
+                      {payment.monthNumber && (
+                        <span className="text-xs text-slate-500">
+                          Month {payment.monthNumber}
+                        </span>
+                      )}
                       <Badge className={getStatusColor(payment.status)}>
                         <span className="flex items-center gap-1">
                           {getStatusIcon(payment.status)}
@@ -388,12 +621,17 @@ export default function IncomingPaymentsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {payment.status === "pending" && (
+                    {(payment.status === "pending" ||
+                      payment.status === "overdue") && (
                       <Button
                         size="sm"
-                        onClick={() => handleMarkAsPaid(payment)}
+                        onClick={() => {
+                          setSelectedPayment(payment);
+                          setIsMarkPaidDialogOpen(true);
+                        }}
                         className="bg-emerald-500 hover:bg-emerald-600"
                       >
+                        <CheckCircle className="h-4 w-4 mr-1" />
                         Mark as Paid
                       </Button>
                     )}
@@ -432,13 +670,21 @@ export default function IncomingPaymentsPage() {
         onSuccess={fetchData}
       />
       {selectedPayment && (
-        <EditPaymentDialog
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          payment={selectedPayment}
-          fundingSources={fundingSources}
-          onSuccess={fetchData}
-        />
+        <>
+          <EditPaymentDialog
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            payment={selectedPayment}
+            fundingSources={fundingSources}
+            onSuccess={fetchData}
+          />
+          <MarkAsPaidDialog
+            open={isMarkPaidDialogOpen}
+            onOpenChange={setIsMarkPaidDialogOpen}
+            payment={selectedPayment}
+            onConfirm={handleMarkAsPaid}
+          />
+        </>
       )}
     </div>
   );

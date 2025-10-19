@@ -8,7 +8,7 @@ This platform helps users manage:
 
 - **Funding Sources**: Track loans from banks, personal contributions, and organizational loans
 - **EMI Payments**: Monitor and schedule all EMI payments with automated reminders
-- **Outgoing Expenses**: Record payments to builders, valuations, document fees, stamp duty, etc.
+- **Outgoing Payments**: Record payments to builders, valuations, document fees, stamp duty, etc.
 - **Analytics**: Comprehensive financial insights with charts and reports
 - **Automated Reminders**: Email notifications for upcoming payments
 
@@ -132,7 +132,7 @@ Detailed documentation is available in the `docs/` folder:
 ### 1. Dashboard
 
 - Total Funding Summary
-- Total Outgoing Expenses
+- Total Outgoing Payments
 - Financial Overview with Net Position
 - Quick action buttons
 
@@ -145,7 +145,7 @@ Detailed documentation is available in the `docs/` folder:
 
 ### 3. Outgoing Payments
 
-- Track all expenses (builder, fees, duties)
+- Track all payments (builder, fees, duties)
 - Categorized payment types
 - Receipt uploads
 - Payment timeline

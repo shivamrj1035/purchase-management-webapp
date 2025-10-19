@@ -16,11 +16,11 @@ export default function HomePage() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center space-y-6 mb-16">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
-            Housing Management Platform
+            Property Purchase Management System
           </h1>
           <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto">
             Track your home buying financial journey with ease. Manage funding
-            sources, EMI payments, and expenses all in one place.
+            sources, EMI payments, and payments all in one place.
           </p>
           <div className="flex gap-4 justify-center pt-6">
             <Link href="/login">
@@ -210,7 +210,9 @@ export default function HomePage() {
 
         {/* Footer */}
         <div className="mt-16 text-center text-slate-500 text-sm">
-          <p>© 2024 Housing Management Platform. All rights reserved.</p>
+          <p>
+            © 2024 Property Purchase Management System. All rights reserved.
+          </p>
         </div>
       </div>
     </div>

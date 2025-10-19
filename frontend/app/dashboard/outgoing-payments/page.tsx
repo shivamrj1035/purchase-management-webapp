@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuthStore } from "@/lib/store/authStore";
+import { usePropertyStore } from "@/lib/store/propertyStore";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,6 +28,9 @@ import {
   Building2,
   FileText,
   DollarSign,
+  IndianRupee,
+  AlertTriangle,
+  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils/emiCalculator";
@@ -55,6 +59,7 @@ export interface OutgoingPayment {
 
 export default function OutgoingPaymentsPage() {
   const { user } = useAuthStore();
+  const { propertyDetails, getTotalCost } = usePropertyStore();
   const [payments, setPayments] = useState<OutgoingPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
@@ -132,6 +137,10 @@ export default function OutgoingPaymentsPage() {
     .reduce((sum, p) => sum + p.amount, 0);
   const totalExpenses = totalPaid + totalPending;
 
+  // Calculate pending amount based on property details
+  const totalPropertyCost = getTotalCost();
+  const pendingPaymentAmount = totalPropertyCost - totalPaid;
+
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       builder_payment: "Builder Payment",
@@ -166,7 +175,7 @@ export default function OutgoingPaymentsPage() {
         <div>
           <h1 className="text-3xl font-bold text-white">Outgoing Payments</h1>
           <p className="text-slate-400 mt-1">
-            Track builder payments, fees, and other expenses
+            Track builder payments, fees, and other payments
           </p>
         </div>
         <Button
@@ -178,12 +187,30 @@ export default function OutgoingPaymentsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Property Total Cost */}
+        {propertyDetails && (
+          <Card className="bg-gradient-to-br from-blue-900/50 to-slate-900 border-blue-800">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-blue-300 flex items-center">
+                <Building2 className="h-4 w-4 mr-2" />
+                Total Property Cost
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">
+                {formatCurrency(totalPropertyCost)}
+              </div>
+              <p className="text-xs text-blue-300 mt-1">Purchase + All Fees</p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center">
               <ArrowUpCircle className="h-4 w-4 mr-2" />
-              Total Expenses
+              Total Payments Made
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -199,7 +226,7 @@ export default function OutgoingPaymentsPage() {
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center">
-              <DollarSign className="h-4 w-4 mr-2 text-emerald-500" />
+              <IndianRupee className="h-4 w-4 mr-2 text-emerald-500" />
               Paid
             </CardTitle>
           </CardHeader>
@@ -216,20 +243,51 @@ export default function OutgoingPaymentsPage() {
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center">
-              <DollarSign className="h-4 w-4 mr-2 text-amber-500" />
-              Pending
+              <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
+              Pending Amount
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-500">
-              {formatCurrency(totalPending)}
+              {formatCurrency(Math.max(0, pendingPaymentAmount))}
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              {payments.filter((p) => p.status === "pending").length} payments
+              {propertyDetails ? "Remaining to pay" : "Set property details"}
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Property Details Alert */}
+      {!propertyDetails && (
+        <Card className="bg-amber-900/20 border-amber-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <Settings className="h-6 w-6 text-amber-500 mt-1" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-200 mb-1">
+                  Configure Property Details
+                </h3>
+                <p className="text-sm text-amber-300 mb-3">
+                  Set your property purchase price and fees to accurately track
+                  pending payments. The system will automatically calculate the
+                  remaining amount based on payments made.
+                </p>
+                <Button
+                  onClick={() => {
+                    // TODO: Add property details configuration dialog
+                    toast.info("Property configuration coming soon!");
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configure Property Details
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader>

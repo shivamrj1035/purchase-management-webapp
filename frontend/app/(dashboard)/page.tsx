@@ -113,7 +113,7 @@ export default function DashboardPage() {
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate-400">
-              Total Expenses
+              Total Payments
             </CardTitle>
             <ArrowUpCircle className="h-4 w-4 text-slate-400" />
           </CardHeader>
@@ -129,7 +129,7 @@ export default function DashboardPage() {
             <p className="text-xs text-slate-400 mt-1">
               {stats.totalExpenses > 0
                 ? "Total paid + pending"
-                : "No expenses recorded"}
+                : "No payments recorded"}
             </p>
             <Button
               size="sm"
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                   Track Your Payments
                 </h4>
                 <p className="text-sm text-slate-400">
-                  Record EMI payments and expenses like builder payments,
+                  Record EMI payments and payments like builder payments,
                   registration fees, etc.
                 </p>
               </div>
@@ -251,7 +251,7 @@ export default function DashboardPage() {
         <Card className="bg-slate-900 border-slate-800 hover:border-blue-500/50 transition cursor-pointer">
           <CardContent className="pt-6">
             <ArrowUpCircle className="h-8 w-8 text-amber-500 mb-2" />
-            <h3 className="text-white font-semibold mb-1">Expenses</h3>
+            <h3 className="text-white font-semibold mb-1">Payments</h3>
             <p className="text-xs text-slate-400">
               Record all outgoing payments
             </p>

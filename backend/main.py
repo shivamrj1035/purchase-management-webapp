@@ -1,6 +1,6 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
+from fastapi import FastAPI  # pyright: ignore[reportMissingImports]
+from fastapi.middleware.cors import CORSMiddleware  # pyright: ignore[reportMissingImports]
+from dotenv import load_dotenv  # pyright: ignore[reportMissingImports]
 import os
 import sys
 
@@ -71,6 +71,6 @@ async def api_info():
     }
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # pyright: ignore[reportMissingImports]
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

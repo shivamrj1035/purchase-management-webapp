@@ -294,7 +294,7 @@ formatDate(date) → string
 1. ✅ **Funding Sources** - COMPLETE
 2. **EMI Payments Tracking** - Record actual EMI payments made
 3. **Outgoing Payments** - Track builder payments, registration fees, etc.
-4. **Analytics Dashboard** - Visualize funding vs expenses
+4. **Analytics Dashboard** - Visualize funding vs payments
 5. **Reports Generation** - PDF/Excel export of statements
 
 ### Future Enhancements:

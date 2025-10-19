@@ -198,7 +198,7 @@ frontend/
 
 - [ ] Create SummaryCard component
 - [ ] Build "Total Funding" card
-- [ ] Build "Total Expenses" card
+- [ ] Build "Total Payments" card
 - [ ] Build "Financial Overview" card
 - [ ] Implement data fetching hooks
 - [ ] Add loading states
@@ -218,7 +218,7 @@ frontend/
 
 - [ ] Create analytics service
 - [ ] Build dashboard summary endpoint
-- [ ] Implement calculations (total funded, expenses, etc.)
+- [ ] Implement calculations (total funded, payments, etc.)
 - [ ] Add caching for performance
 
 **Files to create:**

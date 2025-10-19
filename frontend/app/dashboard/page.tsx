@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import {
   Card,
@@ -30,6 +30,7 @@ export default function DashboardPage() {
     totalFunding: 0,
     totalExpenses: 0,
     netPosition: 0,
+    purchasePrice: 0,
   });
 
   useEffect(() => {
@@ -37,6 +38,17 @@ export default function DashboardPage() {
       const userId = user?.userId || "dev-user";
 
       try {
+        // Fetch property purchase price
+        let purchasePrice = 0;
+        try {
+          const propertyRef = doc(db, "users", userId, "settings", "property");
+          const propertyDoc = await getDoc(propertyRef);
+          if (propertyDoc.exists()) {
+            purchasePrice = propertyDoc.data().purchasePrice || 0;
+          }
+        } catch (error) {
+          console.log("No property details found");
+        }
         // Fetch funding sources
         const fundingRef = collection(db, "users", userId, "fundingSources");
         const fundingSnapshot = await getDocs(fundingRef);
@@ -57,6 +69,7 @@ export default function DashboardPage() {
           totalFunding,
           totalExpenses,
           netPosition: totalFunding - totalExpenses,
+          purchasePrice,
         });
       } catch (error) {
         console.error("Error fetching stats:", error);
@@ -75,6 +88,121 @@ export default function DashboardPage() {
           Overview of your home buying financial journey
         </p>
       </div>
+
+      {/* Purchase Progress Card */}
+      {stats.purchasePrice > 0 && (
+        <Card className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20">
+          <CardHeader>
+            <CardTitle className="text-white">
+              Property Purchase Progress
+            </CardTitle>
+            <CardDescription className="text-slate-300">
+              Track your payment completion status
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-400">Target Amount</span>
+                <span className="text-lg font-bold text-white">
+                  {formatCurrency(stats.purchasePrice)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-400">
+                  Total Funding Arranged
+                </span>
+                <span className="text-lg font-semibold text-blue-400">
+                  {formatCurrency(stats.totalFunding)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-400">Amount Paid</span>
+                <span className="text-lg font-semibold text-emerald-400">
+                  {formatCurrency(stats.totalExpenses)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-slate-700">
+                <span className="text-sm font-semibold text-white">
+                  Remaining to Arrange
+                </span>
+                <span
+                  className={`text-lg font-bold ${
+                    stats.purchasePrice - stats.totalFunding > 0
+                      ? "text-amber-400"
+                      : "text-emerald-400"
+                  }`}
+                >
+                  {formatCurrency(
+                    Math.max(0, stats.purchasePrice - stats.totalFunding)
+                  )}
+                </span>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">Funding Progress</span>
+                <span className="text-white font-semibold">
+                  {Math.min(
+                    100,
+                    Math.round((stats.totalFunding / stats.purchasePrice) * 100)
+                  )}
+                  %
+                </span>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-3">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (stats.totalFunding / stats.purchasePrice) * 100
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Payment Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">Payment Progress</span>
+                <span className="text-white font-semibold">
+                  {Math.min(
+                    100,
+                    Math.round(
+                      (stats.totalExpenses / stats.purchasePrice) * 100
+                    )
+                  )}
+                  %
+                </span>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-3">
+                <div
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (stats.totalExpenses / stats.purchasePrice) * 100
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {stats.totalFunding >= stats.purchasePrice && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                <p className="text-sm text-emerald-400 font-semibold text-center">
+                  🎉 Congratulations! You have arranged full funding for the
+                  purchase!
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -113,7 +241,7 @@ export default function DashboardPage() {
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-slate-400">
-              Total Expenses
+              Total Payments
             </CardTitle>
             <ArrowUpCircle className="h-4 w-4 text-slate-400" />
           </CardHeader>
@@ -129,7 +257,7 @@ export default function DashboardPage() {
             <p className="text-xs text-slate-400 mt-1">
               {stats.totalExpenses > 0
                 ? "Total paid + pending"
-                : "No expenses recorded"}
+                : "No payments recorded"}
             </p>
             <Button
               size="sm"
@@ -201,7 +329,7 @@ export default function DashboardPage() {
                   Track Your Payments
                 </h4>
                 <p className="text-sm text-slate-400">
-                  Record EMI payments and expenses like builder payments,
+                  Record EMI payments and payments like builder payments,
                   registration fees, etc.
                 </p>
               </div>
@@ -251,7 +379,7 @@ export default function DashboardPage() {
         <Card className="bg-slate-900 border-slate-800 hover:border-blue-500/50 transition cursor-pointer">
           <CardContent className="pt-6">
             <ArrowUpCircle className="h-8 w-8 text-amber-500 mb-2" />
-            <h3 className="text-white font-semibold mb-1">Expenses</h3>
+            <h3 className="text-white font-semibold mb-1">Payments</h3>
             <p className="text-xs text-slate-400">
               Record all outgoing payments
             </p>

@@ -68,25 +68,25 @@ activeFunding = sum(fundingSources.principalAmount where status = 'active')
 
 ---
 
-#### 2. Total Outgoing Expenses Card
+#### 2. Total Outgoing Payments Card
 
-**Purpose:** Display total amount spent on property-related expenses.
+**Purpose:** Display total amount spent on property-related payments.
 
 **Displays:**
 
-- Total expenses (₹)
+- Total Payments (₹)
 - Breakdown by payment type:
   - Builder payments
   - Registration & stamp duty
   - Valuation & document fees
-  - Other expenses
+  - Other payments
 - Completed vs. pending payments
 - Progress bar (Funded vs. Spent)
 
 **Actions:**
 
 - "Add Expense" button
-- "View All Expenses" link
+- "View All Payments" link
 
 **Calculations:**
 
@@ -101,7 +101,7 @@ progressPercentage = (totalExpenses / totalFunded) * 100
 
 ```
 ┌─────────────────────────────────────┐
-│ 📤 Total Expenses                   │
+│ 📤 Total Payments                   │
 │                                     │
 │ ₹15,00,000 of ₹50,00,000           │
 │ [████░░░░░░] 30%                    │
@@ -594,7 +594,7 @@ function calculateEMI(principal: number, rate: number, tenure: number): number {
 - Interior work
 - Furniture
 - Appliances
-- Miscellaneous expenses
+- Miscellaneous payments
 
 ---
 
@@ -629,7 +629,7 @@ function calculateEMI(principal: number, rate: number, tenure: number): number {
 
 **Summary:**
 
-- Total expenses
+- Total Payments
 - Completed payments
 - Pending payments
 - Breakdown by category (pie chart)
@@ -749,14 +749,14 @@ function calculateEMI(principal: number, rate: number, tenure: number): number {
 **Gantt Chart View:**
 
 - Timeline of all funding received (top)
-- Timeline of all expenses paid (bottom)
+- Timeline of all payments paid (bottom)
 - Visual comparison of inflow vs. outflow
 - Identify cash flow gaps
 
 **Cashflow Chart:**
 
 - Monthly net cashflow
-- Stacked bar: Funding received vs. Expenses paid
+- Stacked bar: Funding received vs. Payments paid
 - Running balance line
 
 ---
@@ -819,7 +819,7 @@ function calculateEMI(principal: number, rate: number, tenure: number): number {
 **A. Summary:**
 
 - Total funded
-- Total expenses
+- Total Payments
 - Net position
 - Total interest paid
 
@@ -844,7 +844,7 @@ function calculateEMI(principal: number, rate: number, tenure: number): number {
 **E. Monthly Breakdown:**
 
 - Month-wise funding received
-- Month-wise expenses paid
+- Month-wise payments paid
 - Net monthly cashflow
 
 **Export Formats:**
@@ -909,7 +909,7 @@ function calculateEMI(principal: number, rate: number, tenure: number): number {
 
 - All upcoming EMIs
 - Estimated construction payments
-- Other scheduled expenses
+- Other scheduled payments
 - Total projected outflow
 
 **Calendar Export:**

@@ -63,8 +63,8 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex flex-col w-64 bg-slate-900 border-r border-slate-800">
       <div className="p-6">
-        <h1 className="text-2xl font-bold text-blue-500">Housing Manager</h1>
-        <p className="text-xs text-slate-500 mt-1">Financial Management</p>
+        <h1 className="text-2xl font-bold text-blue-500">Property Purchase</h1>
+        <p className="text-xs text-slate-500 mt-1">Management System</p>
       </div>
 
       <nav className="flex-1 px-4 space-y-1">
@@ -95,7 +95,7 @@ export function Sidebar() {
         <div className="bg-slate-800 rounded-lg p-4">
           <p className="text-xs font-semibold text-white mb-1">Need Help?</p>
           <p className="text-xs text-slate-400">
-            Check our documentation for guides and FAQs
+            Contact Shivam Jayswal (Developer) +91 9054401780
           </p>
         </div>
       </div>

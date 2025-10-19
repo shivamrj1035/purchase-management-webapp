@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
           className="inline-flex items-center gap-2 text-blue-500 hover:text-blue-400 transition"
         >
           <Home className="h-6 w-6" />
-          <span className="text-xl font-bold">Housing Management</span>
+          <span className="text-xl font-bold">Property Purchase Manager</span>
         </Link>
       </div>
 

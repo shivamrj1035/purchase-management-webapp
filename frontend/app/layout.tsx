@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Housing Management Platform",
+  title: "Property Purchase Management System",
   description: "Track your home buying financial journey with ease",
 };
 
