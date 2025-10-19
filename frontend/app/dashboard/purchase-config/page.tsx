@@ -39,7 +39,7 @@ export default function PurchaseConfigPage() {
   const totalCost = getTotalCost();
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-12">
@@ -54,21 +54,26 @@ export default function PurchaseConfigPage() {
       {!loading && (
         <>
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-white">
                 Purchase Configuration
               </h1>
-              <p className="text-slate-400 mt-1">
+              <p className="text-sm md:text-base text-slate-400 mt-1">
                 Configure your property purchase details and fees
               </p>
             </div>
             <Button
               onClick={() => setIsEditDialogOpen(true)}
-              className="bg-blue-500 hover:bg-blue-600"
+              className="bg-blue-500 hover:bg-blue-600 whitespace-nowrap w-full sm:w-auto"
             >
               <Edit className="h-4 w-4 mr-2" />
-              {isConfigured ? "Edit Configuration" : "Set Up Configuration"}
+              <span className="hidden sm:inline">
+                {isConfigured ? "Edit Configuration" : "Set Up Configuration"}
+              </span>
+              <span className="sm:hidden">
+                {isConfigured ? "Edit Config" : "Set Up Config"}
+              </span>
             </Button>
           </div>
 
@@ -126,7 +131,7 @@ export default function PurchaseConfigPage() {
               </Card>
 
               {/* Property Details Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 {/* Basic Details */}
                 <Card className="bg-slate-900 border-slate-800">
                   <CardHeader>

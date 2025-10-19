@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CenteredLoader } from "@/components/ui/loader";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus,
@@ -265,16 +266,16 @@ export default function IncomingPaymentsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-white">EMI Payments</h1>
           <p className="text-slate-400 mt-1">
             Track your loan EMI payments (Auto-synced)
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             onClick={handleSyncEMIPayments}
             disabled={syncing}
@@ -297,7 +298,7 @@ export default function IncomingPaymentsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center">
@@ -385,7 +386,7 @@ export default function IncomingPaymentsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-3 min-w-0">
               {overduePayments.map((payment) => {
                 const daysOverdue = Math.ceil(
                   (now.getTime() - payment.dueDate.getTime()) /
@@ -394,10 +395,10 @@ export default function IncomingPaymentsPage() {
                 return (
                   <div
                     key={payment.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-red-900/30 border border-red-800"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-red-900/30 border border-red-800"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
                         <h4 className="font-semibold text-white">
                           {payment.fundingSourceName}
                         </h4>
@@ -410,7 +411,7 @@ export default function IncomingPaymentsPage() {
                           {daysOverdue} day(s) overdue
                         </span>
                       </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-red-200">
+                      <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-1 text-sm text-red-200">
                         <span>Amount: {formatCurrency(payment.amount)}</span>
                         <span>•</span>
                         <span>Due: {formatDate(payment.dueDate)}</span>
@@ -462,7 +463,7 @@ export default function IncomingPaymentsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-3 min-w-0">
               {upcomingPayments.map((payment) => {
                 const daysUntilDue = Math.ceil(
                   (payment.dueDate.getTime() - now.getTime()) /
@@ -471,14 +472,14 @@ export default function IncomingPaymentsPage() {
                 return (
                   <div
                     key={payment.id}
-                    className={`flex items-center justify-between p-3 rounded-lg ${
+                    className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg ${
                       daysUntilDue <= 7
                         ? "bg-amber-900/20 border border-amber-800"
                         : "bg-slate-800 border border-slate-700"
                     }`}
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
                         <h4 className="font-semibold text-white">
                           {payment.fundingSourceName}
                         </h4>
@@ -488,7 +489,7 @@ export default function IncomingPaymentsPage() {
                           </span>
                         )}
                         <span
-                          className={`text-xs ${
+                          className={`text-xs break-words ${
                             daysUntilDue <= 7
                               ? "text-amber-400"
                               : "text-blue-400"
@@ -497,13 +498,13 @@ export default function IncomingPaymentsPage() {
                           Due in {daysUntilDue} day(s)
                         </span>
                       </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-slate-400">
+                      <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-1 text-sm text-slate-400">
                         <span>Amount: {formatCurrency(payment.amount)}</span>
                         <span>•</span>
                         <span>Due: {formatDate(payment.dueDate)}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Button
                         size="sm"
                         variant="outline"
@@ -539,22 +540,22 @@ export default function IncomingPaymentsPage() {
       {/* Filter Tabs */}
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4">
             <div>
               <CardTitle className="text-white">Payment History</CardTitle>
               <CardDescription className="text-slate-400">
                 View and manage all EMI payments
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant={filter === "all" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFilter("all")}
                 className={
                   filter === "all"
-                    ? "bg-blue-500"
-                    : "border-slate-700 text-slate-300"
+                    ? "bg-blue-500 hover:bg-blue-600"
+                    : "border-slate-700 text-slate-300 hover:bg-slate-800"
                 }
               >
                 All
@@ -565,8 +566,8 @@ export default function IncomingPaymentsPage() {
                 onClick={() => setFilter("paid")}
                 className={
                   filter === "paid"
-                    ? "bg-emerald-500"
-                    : "border-slate-700 text-slate-300"
+                    ? "bg-emerald-500 hover:bg-emerald-600"
+                    : "border-slate-700 text-slate-300 hover:bg-slate-800"
                 }
               >
                 Paid
@@ -577,8 +578,8 @@ export default function IncomingPaymentsPage() {
                 onClick={() => setFilter("pending")}
                 className={
                   filter === "pending"
-                    ? "bg-amber-500"
-                    : "border-slate-700 text-slate-300"
+                    ? "bg-amber-500 hover:bg-amber-600"
+                    : "border-slate-700 text-slate-300 hover:bg-slate-800"
                 }
               >
                 Pending
@@ -589,8 +590,8 @@ export default function IncomingPaymentsPage() {
                 onClick={() => setFilter("overdue")}
                 className={
                   filter === "overdue"
-                    ? "bg-red-500"
-                    : "border-slate-700 text-slate-300"
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "border-slate-700 text-slate-300 hover:bg-slate-800"
                 }
               >
                 Overdue
@@ -600,7 +601,7 @@ export default function IncomingPaymentsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-12 text-slate-400">Loading...</div>
+            <CenteredLoader message="Loading EMI payments..." />
           ) : filteredPayments.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-slate-600 mx-auto mb-4" />
@@ -614,14 +615,14 @@ export default function IncomingPaymentsPage() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 min-w-0">
               {filteredPayments.map((payment) => (
                 <div
                   key={payment.id}
-                  className="flex items-center justify-between p-4 rounded-lg bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-lg bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-3">
                       <h3 className="text-lg font-semibold text-white">
                         {payment.fundingSourceName}
                       </h3>
@@ -637,7 +638,7 @@ export default function IncomingPaymentsPage() {
                         </span>
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2 text-sm text-slate-400">
                       <span>Amount: {formatCurrency(payment.amount)}</span>
                       <span>•</span>
                       <span>Due: {formatDate(payment.dueDate)}</span>
@@ -655,7 +656,7 @@ export default function IncomingPaymentsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {(payment.status === "pending" ||
                       payment.status === "overdue") && (
                       <Button

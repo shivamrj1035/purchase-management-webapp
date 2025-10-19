@@ -33,7 +33,13 @@
     @apply border-border;
   }
   body {
-    @apply bg-slate-950 text-white font-sans antialiased;
+    @apply bg-slate-950 text-white font-sans antialiased overflow-x-hidden;
+  }
+  html {
+    @apply overflow-x-hidden;
+  }
+  #__next {
+    @apply overflow-x-hidden;
   }
 }
 
@@ -150,5 +156,67 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Responsive utilities for text overflow */
+@layer utilities {
+  .text-responsive {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-lg {
+    @apply text-base sm:text-lg md:text-xl;
+  }
+
+  .text-responsive-xl {
+    @apply text-lg sm:text-xl md:text-2xl;
+  }
+
+  /* Prevent text overflow in cards */
+  .card-text-safe {
+    @apply break-words;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  /* Truncate with ellipsis */
+  .truncate-safe {
+    @apply truncate max-w-full;
+  }
+
+  /* Responsive padding for cards */
+  .card-padding {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+
+  /* Responsive gap */
+  .gap-responsive {
+    @apply gap-2 sm:gap-3 md:gap-4;
+  }
+
+  /* Mobile-first grid */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  /* Ensure modals are scrollable on small screens */
+  .modal-safe {
+    @apply max-h-[90vh] overflow-y-auto;
+  }
+
+  /* Prevent horizontal scroll */
+  .no-h-scroll {
+    @apply overflow-x-hidden max-w-full;
+  }
+
+  /* Container to prevent overflow */
+  .container-safe {
+    @apply w-full max-w-full overflow-x-hidden;
+  }
+
+  /* Card wrapper that prevents overflow */
+  .card-wrapper {
+    @apply w-full min-w-0;
   }
 }

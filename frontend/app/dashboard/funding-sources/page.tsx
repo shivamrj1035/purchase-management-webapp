@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CenteredLoader } from "@/components/ui/loader";
 import {
   Plus,
   Trash2,
@@ -211,9 +212,9 @@ export default function FundingSourcesPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-white">Funding Sources</h1>
           <p className="text-slate-400 mt-1">
@@ -230,7 +231,7 @@ export default function FundingSourcesPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
         <Card className="bg-slate-900 border-slate-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center">
@@ -287,7 +288,7 @@ export default function FundingSourcesPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-12 text-slate-400">Loading...</div>
+            <CenteredLoader message="Loading funding sources..." />
           ) : fundingSources.length === 0 ? (
             <div className="text-center py-12">
               <Wallet className="h-12 w-12 text-slate-600 mx-auto mb-4" />
@@ -301,40 +302,44 @@ export default function FundingSourcesPage() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4 w-full">
               {fundingSources.map((source) => {
                 const nextEMI = getNextEMIDetails(source);
                 return (
                   <div
                     key={source.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors"
+                    className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-3 md:p-4 rounded-lg bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors gap-3 w-full min-w-0"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-semibold text-white">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                        <h3 className="text-base md:text-lg font-semibold text-white truncate">
                           {source.sourceName}
                         </h3>
                         <span
-                          className={`text-xs font-medium uppercase ${getStatusColor(
+                          className={`text-xs font-medium uppercase flex-shrink-0 ${getStatusColor(
                             source.status
                           )}`}
                         >
                           {source.status}
                         </span>
                       </div>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
-                        <span>{getSourceTypeLabel(source.sourceType)}</span>
-                        <span>•</span>
-                        <span>
+                      <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2 text-xs md:text-sm text-slate-400">
+                        <span className="truncate">
+                          {getSourceTypeLabel(source.sourceType)}
+                        </span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="truncate">
                           Principal: {formatCurrency(source.principalAmount)}
                         </span>
                         {(source.sourceType === "bank_loan" ||
                           source.sourceType === "personal_loan") && (
                           <>
-                            <span>•</span>
-                            <span>EMI: {formatCurrency(source.emiAmount)}</span>
-                            <span>•</span>
-                            <span>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="truncate">
+                              EMI: {formatCurrency(source.emiAmount)}
+                            </span>
+                            <span className="hidden md:inline">•</span>
+                            <span className="truncate">
                               {source.interestType === "percentage"
                                 ? `${source.interestRate}% p.a.`
                                 : source.interestType === "fixed_amount"
@@ -346,37 +351,41 @@ export default function FundingSourcesPage() {
                         )}
                       </div>
                       {source.bankName && (
-                        <div className="text-xs text-slate-500 mt-1">
+                        <div className="text-xs text-slate-500 mt-1 truncate">
                           {source.bankName}
                         </div>
                       )}
                       {source.lenderName && (
-                        <div className="text-xs text-slate-500 mt-1">
+                        <div className="text-xs text-slate-500 mt-1 truncate">
                           Lender: {source.lenderName}
                         </div>
                       )}
                       {/* Next EMI Details */}
                       {nextEMI && source.status === "active" && (
                         <div className="mt-3 pt-3 border-t border-slate-700">
-                          <div className="flex items-center gap-4 text-sm">
+                          <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm">
                             <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-blue-400" />
+                              <Clock className="h-3 w-3 md:h-4 md:w-4 text-blue-400 flex-shrink-0" />
                               <span className="text-slate-300">Next EMI:</span>
-                              <span className="font-semibold text-white">
+                              <span className="font-semibold text-white truncate">
                                 {formatCurrency(nextEMI.amount)}
                               </span>
                             </div>
-                            <span className="text-slate-600">•</span>
+                            <span className="text-slate-600 hidden sm:inline">
+                              •
+                            </span>
                             <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-blue-400" />
+                              <Calendar className="h-3 w-3 md:h-4 md:w-4 text-blue-400 flex-shrink-0" />
                               <span className="text-slate-300">Due:</span>
-                              <span className="font-semibold text-white">
+                              <span className="font-semibold text-white truncate">
                                 {formatDate(nextEMI.dueDate)}
                               </span>
                             </div>
-                            <span className="text-slate-600">•</span>
+                            <span className="text-slate-600 hidden sm:inline">
+                              •
+                            </span>
                             <div
-                              className={`flex items-center gap-1 px-2 py-1 rounded-md ${
+                              className={`flex items-center gap-1 px-2 py-1 rounded-md flex-shrink-0 ${
                                 nextEMI.status === "overdue"
                                   ? "bg-red-500/20 text-red-400"
                                   : nextEMI.status === "due_soon"
@@ -386,8 +395,8 @@ export default function FundingSourcesPage() {
                             >
                               {nextEMI.status === "overdue" && (
                                 <>
-                                  <AlertCircle className="h-3 w-3" />
-                                  <span className="text-xs font-medium">
+                                  <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                                  <span className="text-xs font-medium whitespace-nowrap">
                                     Overdue by {Math.abs(nextEMI.daysUntilDue)}{" "}
                                     days
                                   </span>
@@ -395,14 +404,14 @@ export default function FundingSourcesPage() {
                               )}
                               {nextEMI.status === "due_soon" && (
                                 <>
-                                  <AlertCircle className="h-3 w-3" />
-                                  <span className="text-xs font-medium">
+                                  <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                                  <span className="text-xs font-medium whitespace-nowrap">
                                     Due in {nextEMI.daysUntilDue} days
                                   </span>
                                 </>
                               )}
                               {nextEMI.status === "upcoming" && (
-                                <span className="text-xs font-medium">
+                                <span className="text-xs font-medium whitespace-nowrap">
                                   {nextEMI.daysUntilDue} days remaining
                                 </span>
                               )}
@@ -411,7 +420,7 @@ export default function FundingSourcesPage() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0 self-end lg:self-center">
                       <Button
                         variant="ghost"
                         size="sm"

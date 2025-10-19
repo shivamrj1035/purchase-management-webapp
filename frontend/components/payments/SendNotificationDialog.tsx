@@ -223,29 +223,29 @@ export function SendNotificationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-2xl">
+      <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <Send className="h-6 w-6 text-blue-400" />
-            Send EMI Payment Reminder
+          <DialogTitle className="text-xl md:text-2xl flex items-center gap-2">
+            <Send className="h-5 w-5 md:h-6 md:w-6 text-blue-400" />
+            <span className="truncate">Send EMI Payment Reminder</span>
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-slate-400 text-sm">
             Send email notification for selected EMI payment
             {selectedEMIs.length > 1 ? "s" : ""}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 md:space-y-6 py-4">
           {/* Email Configuration Check */}
           {!config?.primaryEmail ? (
-            <div className="bg-red-500/10 border border-red-500 rounded-lg p-4">
+            <div className="bg-red-500/10 border border-red-500 rounded-lg p-3 md:p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-400 mt-0.5" />
+                <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h4 className="font-semibold text-red-400">
+                  <h4 className="font-semibold text-red-400 text-sm md:text-base">
                     Email Not Configured
                   </h4>
-                  <p className="text-sm text-red-300 mt-1">
+                  <p className="text-xs md:text-sm text-red-300 mt-1">
                     Please configure your email address in the Notification
                     Settings before sending reminders.
                   </p>
@@ -256,28 +256,34 @@ export function SendNotificationDialog({
             <>
               {/* Primary Email Display */}
               <div className="space-y-2">
-                <Label className="text-slate-300">To (Primary Email)</Label>
-                <div className="flex items-center gap-2 bg-slate-900 p-3 rounded-lg border border-slate-700">
-                  <Mail className="h-4 w-4 text-blue-400" />
-                  <span className="text-white">{config.primaryEmail}</span>
+                <Label className="text-slate-300 text-sm md:text-base">
+                  To (Primary Email)
+                </Label>
+                <div className="flex items-center gap-2 bg-slate-900 p-2 md:p-3 rounded-lg border border-slate-700">
+                  <Mail className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                  <span className="text-white text-sm md:text-base truncate">
+                    {config.primaryEmail}
+                  </span>
                 </div>
               </div>
 
               {/* CC Emails */}
               <div className="space-y-3">
-                <Label className="text-slate-300">CC (Carbon Copy)</Label>
+                <Label className="text-slate-300 text-sm md:text-base">
+                  CC (Carbon Copy)
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     type="email"
                     value={newCcEmail}
                     onChange={(e) => setNewCcEmail(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleAddCcEmail()}
-                    className="bg-slate-900 border-slate-700 text-white"
+                    className="bg-slate-900 border-slate-700 text-white text-sm"
                     placeholder="additional-email@example.com"
                   />
                   <Button
                     onClick={handleAddCcEmail}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
                     type="button"
                   >
                     <Plus className="h-4 w-4" />
@@ -291,12 +297,14 @@ export function SendNotificationDialog({
                         key={email}
                         className="flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-700"
                       >
-                        <span className="text-slate-300 text-sm">{email}</span>
+                        <span className="text-slate-300 text-xs md:text-sm truncate">
+                          {email}
+                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveCcEmail(email)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-6 md:h-7 flex-shrink-0"
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -308,34 +316,38 @@ export function SendNotificationDialog({
 
               {/* Selected EMIs Summary */}
               <div className="space-y-3">
-                <Label className="text-slate-300">
+                <Label className="text-slate-300 text-sm md:text-base">
                   Selected EMI Payment{selectedEMIs.length > 1 ? "s" : ""} (
                   {selectedEMIs.length})
                 </Label>
-                <div className="bg-slate-900 rounded-lg border border-slate-700 max-h-64 overflow-y-auto">
+                <div className="bg-slate-900 rounded-lg border border-slate-700 max-h-48 md:max-h-64 overflow-y-auto">
                   {selectedEMIs.map((emi) => (
                     <div
                       key={emi.id}
                       className="p-3 border-b border-slate-700 last:border-0 hover:bg-slate-800/50"
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-white">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-white text-sm md:text-base truncate">
                             {emi.fundingSourceName}
                           </p>
-                          <div className="flex items-center gap-4 mt-1 text-sm text-slate-400">
+                          <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-1 text-xs md:text-sm text-slate-400">
                             <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
+                              <Calendar className="h-3 w-3 flex-shrink-0" />
                               Month {emi.monthNumber}
                             </span>
-                            <span>•</span>
-                            <span>Due: {formatDate(emi.dueDate)}</span>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="truncate">
+                              Due: {formatDate(emi.dueDate)}
+                            </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-blue-400 flex items-center gap-1">
-                            <IndianRupee className="h-4 w-4" />
-                            {formatCurrency(emi.amount).replace("₹", "")}
+                        <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
+                          <p className="font-semibold text-blue-400 flex items-center gap-1 text-sm md:text-base">
+                            <IndianRupee className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                            <span className="truncate">
+                              {formatCurrency(emi.amount).replace("₹", "")}
+                            </span>
                           </p>
                           <Badge
                             variant={
@@ -345,7 +357,7 @@ export function SendNotificationDialog({
                                 ? "secondary"
                                 : "default"
                             }
-                            className="mt-1"
+                            className="text-xs"
                           >
                             {emi.status}
                           </Badge>
@@ -357,9 +369,9 @@ export function SendNotificationDialog({
                   {/* Total Amount */}
                   {selectedEMIs.length > 1 && (
                     <div className="p-3 bg-slate-800 font-semibold">
-                      <div className="flex items-center justify-between text-white">
+                      <div className="flex items-center justify-between text-white text-sm md:text-base">
                         <span>Total Amount</span>
-                        <span className="text-lg text-blue-400">
+                        <span className="text-base md:text-lg text-blue-400 truncate">
                           {formatCurrency(calculateTotalAmount())}
                         </span>
                       </div>
@@ -371,11 +383,11 @@ export function SendNotificationDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            className="border-slate-600 text-slate-300 hover:bg-slate-700 w-full sm:w-auto order-2 sm:order-1"
           >
             Cancel
           </Button>
@@ -384,7 +396,7 @@ export function SendNotificationDialog({
             disabled={
               sending || !config?.primaryEmail || selectedEMIs.length === 0
             }
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto order-1 sm:order-2"
           >
             {sending ? (
               <>

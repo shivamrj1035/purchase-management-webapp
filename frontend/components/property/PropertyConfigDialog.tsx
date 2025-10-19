@@ -30,7 +30,7 @@ interface PropertyConfigDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export default function PropertyConfigDialog({
+function PropertyConfigDialog({
   open,
   onOpenChange,
 }: PropertyConfigDialogProps) {
@@ -342,3 +342,5 @@ export default function PropertyConfigDialog({
     </Dialog>
   );
 }
+
+export default PropertyConfigDialog;

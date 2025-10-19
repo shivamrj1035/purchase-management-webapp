@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CenteredLoader } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -263,16 +264,16 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      <div className="p-3 md:p-6">
+        <CenteredLoader message="Loading reports..." />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-white">Reports</h1>
           <p className="text-slate-400 mt-1">
@@ -493,12 +494,32 @@ export default function ReportsPage() {
       </div>
 
       {/* Detailed Reports Tabs */}
-      <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList className="bg-slate-900 border border-slate-800">
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="funding">Funding Sources</TabsTrigger>
-          <TabsTrigger value="outgoing">Outgoing Payments</TabsTrigger>
-          <TabsTrigger value="incoming">EMI Payments</TabsTrigger>
+      <Tabs defaultValue="summary" className="space-y-4 min-w-0">
+        <TabsList className="bg-slate-900 border border-slate-800 w-full flex flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger
+            value="summary"
+            className="flex-1 min-w-[100px] whitespace-nowrap"
+          >
+            Summary
+          </TabsTrigger>
+          <TabsTrigger
+            value="funding"
+            className="flex-1 min-w-[120px] whitespace-nowrap"
+          >
+            Funding Sources
+          </TabsTrigger>
+          <TabsTrigger
+            value="outgoing"
+            className="flex-1 min-w-[140px] whitespace-nowrap"
+          >
+            Outgoing Payments
+          </TabsTrigger>
+          <TabsTrigger
+            value="incoming"
+            className="flex-1 min-w-[120px] whitespace-nowrap"
+          >
+            EMI Payments
+          </TabsTrigger>
         </TabsList>
 
         {/* Summary Tab */}

@@ -223,52 +223,58 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Bell className="h-8 w-8 text-blue-400" />
+          <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2 md:gap-3">
+            <Bell className="h-6 w-6 md:h-8 md:w-8 text-blue-400" />
             Notifications
           </h1>
-          <p className="text-slate-400 mt-1">
+          <p className="text-sm md:text-base text-slate-400 mt-1">
             Manage your notification preferences and view alerts
           </p>
         </div>
         {unreadCount > 0 && (
-          <Badge variant="destructive" className="h-8 px-4 text-lg">
+          <Badge
+            variant="destructive"
+            className="h-7 md:h-8 px-3 md:px-4 text-base md:text-lg"
+          >
             {unreadCount} Unread
           </Badge>
         )}
       </div>
 
-      <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList className="bg-slate-800 border border-slate-700">
+      <Tabs defaultValue="settings" className="space-y-4 md:space-y-6">
+        <TabsList className="bg-slate-800 border border-slate-700 grid grid-cols-3 w-full sm:w-auto sm:inline-flex">
           <TabsTrigger
             value="settings"
-            className="data-[state=active]:bg-slate-700"
+            className="data-[state=active]:bg-slate-700 text-xs sm:text-sm"
           >
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
+            <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-0 sm:mr-2" />
+            <span className="hidden sm:inline">Settings</span>
           </TabsTrigger>
           <TabsTrigger
             value="notifications"
-            className="data-[state=active]:bg-slate-700"
+            className="data-[state=active]:bg-slate-700 text-xs sm:text-sm"
           >
-            <Bell className="h-4 w-4 mr-2" />
-            Notifications
+            <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-0 sm:mr-2" />
+            <span className="hidden sm:inline">Notifications</span>
             {unreadCount > 0 && (
-              <Badge variant="destructive" className="ml-2">
+              <Badge
+                variant="destructive"
+                className="ml-1 sm:ml-2 h-4 px-1 text-[10px]"
+              >
                 {unreadCount}
               </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger
             value="history"
-            className="data-[state=active]:bg-slate-700"
+            className="data-[state=active]:bg-slate-700 text-xs sm:text-sm"
           >
-            <Clock className="h-4 w-4 mr-2" />
-            History
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-0 sm:mr-2" />
+            <span className="hidden sm:inline">History</span>
           </TabsTrigger>
         </TabsList>
 
@@ -406,11 +412,11 @@ export default function NotificationsPage() {
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-slate-700">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-700">
                 <Button
                   onClick={handleSaveConfig}
                   disabled={saving || !emailConfig.primaryEmail}
-                  className="bg-blue-600 hover:bg-blue-700 flex-1"
+                  className="bg-blue-600 hover:bg-blue-700 flex-1 w-full"
                 >
                   {saving ? (
                     <>
@@ -428,7 +434,7 @@ export default function NotificationsPage() {
                   onClick={handleTestEmail}
                   disabled={testingSending || !emailConfig.primaryEmail}
                   variant="outline"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700 w-full sm:w-auto"
                 >
                   {testingSending ? (
                     <>
@@ -455,7 +461,7 @@ export default function NotificationsPage() {
                 onClick={handleMarkAllAsRead}
                 variant="outline"
                 size="sm"
-                className="border-slate-600 text-slate-300"
+                className="border-slate-600 text-slate-300 w-full sm:w-auto"
               >
                 <CheckCheck className="h-4 w-4 mr-2" />
                 Mark All as Read
@@ -488,25 +494,25 @@ export default function NotificationsPage() {
                     key={notification.id}
                     className="bg-slate-800 border-slate-700 hover:bg-slate-750 transition-colors"
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3 flex-1">
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-start justify-between gap-2 md:gap-4">
+                        <div className="flex items-start gap-2 md:gap-3 flex-1 min-w-0">
                           {getNotificationIcon(notification.type)}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-white">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <h4 className="font-semibold text-white text-sm md:text-base truncate">
                                 {notification.title}
                               </h4>
                               {notification.status === "unread" && (
                                 <Badge
                                   variant="default"
-                                  className="bg-blue-600"
+                                  className="bg-blue-600 text-xs"
                                 >
                                   New
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-slate-400 text-sm">
+                            <p className="text-slate-400 text-xs md:text-sm break-words">
                               {notification.message}
                             </p>
                             <p className="text-slate-600 text-xs mt-2">
@@ -514,13 +520,13 @@ export default function NotificationsPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 flex-shrink-0">
                           {notification.status === "unread" && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleMarkAsRead(notification.id)}
-                              className="text-blue-400 hover:text-blue-300"
+                              className="text-blue-400 hover:text-blue-300 h-8 w-8 p-0"
                             >
                               <Check className="h-4 w-4" />
                             </Button>
@@ -531,7 +537,7 @@ export default function NotificationsPage() {
                             onClick={() =>
                               handleDeleteNotification(notification.id)
                             }
-                            className="text-red-400 hover:text-red-300"
+                            className="text-red-400 hover:text-red-300 h-8 w-8 p-0"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
