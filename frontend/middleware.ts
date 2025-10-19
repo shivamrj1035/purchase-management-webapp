@@ -21,8 +21,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
   
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from auth pages to dashboard
   if (isPublicPath && token && path !== '/') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+  
+  // Redirect root to dashboard if authenticated
+  if (path === '/' && token) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
   
