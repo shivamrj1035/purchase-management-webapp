@@ -6,6 +6,9 @@ import { useAuthStore } from "@/lib/store/authStore";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNav } from "@/components/layout/TopNav";
 
+// Disable static generation for dashboard
+export const dynamic = "force-dynamic";
+
 export default function DashboardLayout({
   children,
 }: {
