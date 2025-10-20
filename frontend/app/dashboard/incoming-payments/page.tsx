@@ -44,6 +44,7 @@ import AddPaymentDialog from "@/components/payments/AddPaymentDialog";
 import EditPaymentDialog from "@/components/payments/EditPaymentDialog";
 import MarkAsPaidDialog from "@/components/payments/MarkAsPaidDialog";
 import { SendNotificationDialog } from "@/components/payments/SendNotificationDialog";
+import { ConfigurationAlert } from "@/components/shared/ConfigurationAlert";
 
 export default function IncomingPaymentsPage() {
   const { user } = useAuthStore();
@@ -252,7 +253,9 @@ export default function IncomingPaymentsPage() {
 
   return (
     <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
-      {/* Header */}
+      {/* Configuration Alert */}
+      <ConfigurationAlert />
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-white">EMI Payments</h1>

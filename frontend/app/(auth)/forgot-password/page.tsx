@@ -22,20 +22,44 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const isDev = process.env.NODE_ENV === "development";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation
+    if (!email || !email.trim()) {
+      toast.error("Error", {
+        description: "Please enter your email address",
+      });
+      return;
+    }
+
     setIsLoading(true);
+    console.log("🔐 Starting password reset for:", email);
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      // Configure action code settings for password reset
+      const actionCodeSettings = {
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: false,
+      };
+
+      console.log(
+        "📧 Sending password reset email with settings:",
+        actionCodeSettings
+      );
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      console.log("✅ Password reset email sent successfully!");
 
       setEmailSent(true);
       toast.success("Password reset email sent!", {
         description: "Check your inbox for reset instructions",
       });
     } catch (error: any) {
-      console.error("Password reset error:", error);
+      console.error("❌ Password reset error:", error);
+      console.error("Error code:", error.code);
+      console.error("Error message:", error.message);
 
       let errorMessage = "Failed to send reset email. Please try again.";
 
@@ -45,6 +69,17 @@ export default function ForgotPasswordPage() {
         errorMessage = "Invalid email address";
       } else if (error.code === "auth/too-many-requests") {
         errorMessage = "Too many requests. Please try again later.";
+      } else if (error.code === "auth/missing-continue-uri") {
+        errorMessage = "Configuration error. Please contact support.";
+        console.error("💡 Fix: Add authorized domains in Firebase Console");
+      } else if (error.code === "auth/invalid-continue-uri") {
+        errorMessage = "Configuration error. Please contact support.";
+        console.error("💡 Fix: Check the action URL format");
+      } else if (error.code === "auth/unauthorized-continue-uri") {
+        errorMessage = "Configuration error. Please contact support.";
+        console.error(
+          "💡 Fix: Add this domain to authorized domains in Firebase"
+        );
       }
 
       toast.error("Error", {
@@ -159,9 +194,17 @@ export default function ForgotPasswordPage() {
                 </ol>
               </div>
 
-              <p className="text-xs text-slate-500 text-center">
-                Didn't receive the email? Check your spam folder or try again.
-              </p>
+              <div className="bg-amber-900/20 border border-amber-800/50 rounded-lg p-4 space-y-2">
+                <p className="text-sm text-amber-300 font-medium">
+                  ⚠️ Email not received?
+                </p>
+                <ul className="text-xs text-amber-400/80 space-y-1 list-disc list-inside">
+                  <li>Check your spam/junk folder</li>
+                  <li>Wait 2-3 minutes (emails can be delayed)</li>
+                  <li>Make sure you entered the correct email</li>
+                  <li>Verify your email is registered</li>
+                </ul>
+              </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-2">
               <Button
@@ -193,6 +236,42 @@ export default function ForgotPasswordPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Development Debug Info */}
+      {isDev && (
+        <Card className="bg-purple-900/20 border-purple-800/50">
+          <CardContent className="py-4">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-purple-300 mb-2">
+                👨‍💻 Development Mode - Debug Info
+              </p>
+              <div className="text-xs text-purple-400/80 space-y-1">
+                <p>• Open browser console (F12) to see detailed logs</p>
+                <p>• Email must be registered in Firebase Authentication</p>
+                <p>• Check spam folder if email not received</p>
+                <p>
+                  • Firebase Project:{" "}
+                  <span className="text-purple-300">
+                    {process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+                  </span>
+                </p>
+                <p className="pt-2 text-purple-300/60">
+                  See{" "}
+                  <a
+                    href="https://github.com/yourusername/yourrepo/blob/main/FORGOT-PASSWORD-DEBUG.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-purple-200"
+                  >
+                    FORGOT-PASSWORD-DEBUG.md
+                  </a>{" "}
+                  for troubleshooting
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
