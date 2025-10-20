@@ -23,6 +23,7 @@ import {
 import { useAuthStore } from "@/lib/store/authStore";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/emiCalculator";
+import { ConfigurationAlert } from "@/components/shared/ConfigurationAlert";
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -83,6 +84,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Configuration Alert */}
+      <ConfigurationAlert />
+
       {/* Welcome Section */}
       <div>
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>

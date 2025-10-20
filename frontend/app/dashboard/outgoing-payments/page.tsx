@@ -37,6 +37,7 @@ import { formatCurrency, formatDate } from "@/lib/utils/emiCalculator";
 import { OutgoingPayment } from "@/lib/types/payment";
 import AddOutgoingPaymentDialog from "@/components/outgoing/AddOutgoingPaymentDialog";
 import EditOutgoingPaymentDialog from "@/components/outgoing/EditOutgoingPaymentDialog";
+import { ConfigurationAlert } from "@/components/shared/ConfigurationAlert";
 
 export default function OutgoingPaymentsPage() {
   const { user } = useAuthStore();
@@ -160,6 +161,9 @@ export default function OutgoingPaymentsPage() {
 
   return (
     <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
+      {/* Configuration Alert */}
+      <ConfigurationAlert />
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-white">Outgoing Payments</h1>

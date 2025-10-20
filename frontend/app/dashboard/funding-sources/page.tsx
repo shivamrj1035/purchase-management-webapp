@@ -29,6 +29,7 @@ import { formatCurrency, formatDate } from "@/lib/utils/emiCalculator";
 import AddFundingSourceDialog from "@/components/funding/AddFundingSourceDialog";
 import EditFundingSourceDialog from "@/components/funding/EditFundingSourceDialog";
 import ViewFundingSourceDialog from "@/components/funding/ViewFundingSourceDialog";
+import { ConfigurationAlert } from "@/components/shared/ConfigurationAlert";
 
 export interface FundingSource {
   id: string;
@@ -229,6 +230,9 @@ export default function FundingSourcesPage() {
 
   return (
     <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
+      {/* Configuration Alert */}
+      <ConfigurationAlert />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>

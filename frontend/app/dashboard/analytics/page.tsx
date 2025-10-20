@@ -30,6 +30,7 @@ import {
   formatCurrency,
   generateAmortizationSchedule,
 } from "@/lib/utils/emiCalculator";
+import { ConfigurationAlert } from "@/components/shared/ConfigurationAlert";
 
 export default function AnalyticsPage() {
   const { user } = useAuthStore();
@@ -183,6 +184,9 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
+      {/* Configuration Alert */}
+      <ConfigurationAlert />
+
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-white">
           Financial Analytics
