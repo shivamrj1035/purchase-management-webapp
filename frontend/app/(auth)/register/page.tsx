@@ -272,6 +272,15 @@ export default function RegisterPage() {
           </CardFooter>
         </form>
       </Card>
+
+      {/* Created By Info */}
+      <Card className="bg-blue-500/10 border-blue-500/20">
+        <CardContent className="py-4">
+          <p className="text-sm text-blue-400 text-center">
+            Created By <strong className="text-blue-300">Shivam Jayswal</strong>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

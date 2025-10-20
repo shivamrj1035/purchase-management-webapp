@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { doc, updateDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { OutgoingPayment } from "@/lib/types/payment";
+import { numberToIndianWords } from "@/lib/utils/numberToWords";
 
 interface EditOutgoingPaymentDialogProps {
   open: boolean;
@@ -51,6 +52,21 @@ export default function EditOutgoingPaymentDialog({
     receiptNumber: payment.receiptNumber || "",
     notes: payment.notes || "",
   });
+
+  // Update form data when payment prop changes
+  useEffect(() => {
+    setFormData({
+      category: payment.category,
+      description: payment.description,
+      amount: payment.amount.toString(),
+      paymentDate: payment.paymentDate.toISOString().split("T")[0],
+      status: payment.status,
+      recipientName: payment.recipientName || "",
+      paymentMethod: payment.paymentMethod || "",
+      receiptNumber: payment.receiptNumber || "",
+      notes: payment.notes || "",
+    });
+  }, [payment]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +169,11 @@ export default function EditOutgoingPaymentDialog({
                 className="bg-slate-800 border-slate-700 text-white"
                 required
               />
+              {formData.amount && parseFloat(formData.amount) > 0 && (
+                <p className="text-xs text-emerald-400 mt-1">
+                  {numberToIndianWords(formData.amount)}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

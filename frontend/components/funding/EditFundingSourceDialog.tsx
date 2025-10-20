@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { calculateEMI } from "@/lib/utils/emiCalculator";
 import { FundingSource } from "@/app/dashboard/funding-sources/page";
+import { numberToIndianWords } from "@/lib/utils/numberToWords";
 
 interface EditFundingSourceDialogProps {
   open: boolean;
@@ -52,10 +53,10 @@ export default function EditFundingSourceDialog({
     interestRate: source.interestRate.toString(),
     fixedInterestAmount: (source.fixedInterestAmount || 0).toString(),
     tenureMonths: source.tenureMonths.toString(),
-    startDate: source.startDate.toISOString().split("T")[0],
+    fundReceivedDate: source.fundReceivedDate.toISOString().split("T")[0],
+    emiStartDate: source.emiStartDate.toISOString().split("T")[0],
     status: source.status,
     bankName: source.bankName || "",
-    lenderName: source.lenderName || "",
     accountNumber: source.accountNumber || "",
     notes: source.notes || "",
   });
@@ -73,10 +74,10 @@ export default function EditFundingSourceDialog({
       interestRate: source.interestRate.toString(),
       fixedInterestAmount: (source.fixedInterestAmount || 0).toString(),
       tenureMonths: source.tenureMonths.toString(),
-      startDate: source.startDate.toISOString().split("T")[0],
+      fundReceivedDate: source.fundReceivedDate.toISOString().split("T")[0],
+      emiStartDate: source.emiStartDate.toISOString().split("T")[0],
       status: source.status,
       bankName: source.bankName || "",
-      lenderName: source.lenderName || "",
       accountNumber: source.accountNumber || "",
       notes: source.notes || "",
     });
@@ -157,10 +158,10 @@ export default function EditFundingSourceDialog({
             : 0,
         tenureMonths: tenure,
         emiAmount: emiAmount,
-        startDate: Timestamp.fromDate(new Date(formData.startDate)),
+        fundReceivedDate: Timestamp.fromDate(new Date(formData.fundReceivedDate)),
+        emiStartDate: Timestamp.fromDate(new Date(formData.emiStartDate)),
         status: formData.status,
         bankName: formData.bankName || null,
-        lenderName: formData.lenderName || null,
         accountNumber: formData.accountNumber || null,
         notes: formData.notes || null,
         updatedAt: Timestamp.now(),
@@ -249,6 +250,12 @@ export default function EditFundingSourceDialog({
               className="bg-slate-800 border-slate-700 text-white"
               required
             />
+            {formData.principalAmount &&
+              parseFloat(formData.principalAmount) > 0 && (
+                <p className="text-xs text-emerald-400 mt-1">
+                  {numberToIndianWords(formData.principalAmount)}
+                </p>
+              )}
           </div>
 
           {/* Loan specific fields (Bank or Personal) */}
@@ -340,42 +347,16 @@ export default function EditFundingSourceDialog({
                     className="bg-slate-800 border-slate-700 text-white"
                     required
                   />
+                  {formData.fixedInterestAmount &&
+                    parseFloat(formData.fixedInterestAmount) > 0 && (
+                      <p className="text-xs text-emerald-400 mt-1">
+                        {numberToIndianWords(formData.fixedInterestAmount)}
+                      </p>
+                    )}
                 </div>
               )}
 
               {/* Bank Name (for bank loans) */}
-              {isBankLoan && (
-                <div className="space-y-2">
-                  <Label htmlFor="bankName">Bank Name</Label>
-                  <Input
-                    id="bankName"
-                    placeholder="e.g., HDFC Bank"
-                    value={formData.bankName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, bankName: e.target.value })
-                    }
-                    className="bg-slate-800 border-slate-700 text-white"
-                  />
-                </div>
-              )}
-
-              {/* Lender Name (for personal loans) */}
-              {isPersonalLoan && (
-                <div className="space-y-2">
-                  <Label htmlFor="lenderName">Lender Name</Label>
-                  <Input
-                    id="lenderName"
-                    placeholder="e.g., John Doe"
-                    value={formData.lenderName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, lenderName: e.target.value })
-                    }
-                    className="bg-slate-800 border-slate-700 text-white"
-                  />
-                </div>
-              )}
-
-              {/* Account Number (for bank loans) */}
               {isBankLoan && (
                 <div className="space-y-2">
                   <Label htmlFor="accountNumber">Account Number</Label>
@@ -398,13 +379,26 @@ export default function EditFundingSourceDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="fundReceivedDate">Fund Received Date</Label>
               <Input
-                id="startDate"
+                id="fundReceivedDate"
                 type="date"
-                value={formData.startDate}
+                value={formData.fundReceivedDate}
                 onChange={(e) =>
-                  setFormData({ ...formData, startDate: e.target.value })
+                  setFormData({ ...formData, fundReceivedDate: e.target.value })
+                }
+                className="bg-slate-800 border-slate-700 text-white"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="emiStartDate">EMI Start Date</Label>
+              <Input
+                id="emiStartDate"
+                type="date"
+                value={formData.emiStartDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, emiStartDate: e.target.value })
                 }
                 className="bg-slate-800 border-slate-700 text-white"
               />

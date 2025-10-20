@@ -200,12 +200,11 @@ export default function LoginPage() {
         </form>
       </Card>
 
-      {/* Demo Credentials (for testing) */}
+      {/* Created By Info */}
       <Card className="bg-blue-500/10 border-blue-500/20">
-        <CardContent className="pt-6">
+        <CardContent className="py-4">
           <p className="text-sm text-blue-400 text-center">
-            <strong>Demo:</strong> Use your Firebase credentials or create a new
-            account
+            Created By <strong className="text-blue-300">Shivam Jayswal</strong>
           </p>
         </CardContent>
       </Card>

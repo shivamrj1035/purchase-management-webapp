@@ -129,20 +129,20 @@ export default function NotificationsPage() {
     if (!user?.email || !user?.username) return;
 
     try {
+      // Get API URL from environment
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
       setTestingSending(true);
-      const response = await fetch(
-        "http://localhost:8000/api/notifications/test-email",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userEmail: emailConfig.primaryEmail,
-            userName: user.username,
-          }),
-        }
-      );
+      const response = await fetch(`${apiUrl}/api/notifications/test-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userEmail: emailConfig.primaryEmail,
+          userName: user.username,
+        }),
+      });
 
       if (response.ok) {
         toast.success("Test email sent successfully! Check your inbox.");
@@ -157,7 +157,29 @@ export default function NotificationsPage() {
     } catch (error: any) {
       console.error("Error sending test email:", error);
       const errorMessage = error?.message || "Failed to send test email";
-      toast.error(errorMessage);
+
+      // Provide helpful error messages
+      if (
+        errorMessage.includes("Network is unreachable") ||
+        errorMessage.includes("[Errno 101]")
+      ) {
+        toast.error(
+          "❌ Email service unavailable on this server. SMTP is blocked. Please configure SendGrid in backend environment variables.",
+          { duration: 8000 }
+        );
+      } else if (errorMessage.includes("SendGrid")) {
+        toast.error(
+          "SendGrid error. Please verify SENDGRID_API_KEY is configured correctly.",
+          { duration: 6000 }
+        );
+      } else if (errorMessage.includes("not configured")) {
+        toast.error(
+          "Email service not configured. Please set up SendGrid or Gmail in backend settings.",
+          { duration: 6000 }
+        );
+      } else {
+        toast.error(errorMessage, { duration: 5000 });
+      }
     } finally {
       setTestingSending(false);
     }

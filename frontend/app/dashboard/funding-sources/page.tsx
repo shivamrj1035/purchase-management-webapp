@@ -45,7 +45,8 @@ export interface FundingSource {
   fixedInterestAmount?: number;
   tenureMonths: number;
   emiAmount: number;
-  startDate: Date;
+  fundReceivedDate: Date;
+  emiStartDate: Date;
   status: "active" | "closed" | "pending";
   bankName?: string;
   lenderName?: string;
@@ -56,8 +57,8 @@ export interface FundingSource {
 }
 
 // Helper function to calculate next EMI date
-function getNextEMIDate(startDate: Date, monthsElapsed: number): Date {
-  const nextDate = new Date(startDate);
+function getNextEMIDate(emiStartDate: Date, monthsElapsed: number): Date {
+  const nextDate = new Date(emiStartDate);
   nextDate.setMonth(nextDate.getMonth() + monthsElapsed);
   return nextDate;
 }
@@ -72,17 +73,31 @@ function getNextEMIDetails(source: FundingSource) {
   }
 
   const now = new Date();
-  const monthsSinceStart = Math.floor(
-    (now.getTime() - source.startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
-  );
+  now.setHours(0, 0, 0, 0); // Reset to start of day for accurate comparison
 
-  const nextEMIMonth = Math.max(0, monthsSinceStart);
+  const startDate = new Date(source.emiStartDate);
+  startDate.setHours(0, 0, 0, 0);
+
+  // Calculate months elapsed more accurately
+  let monthsSinceStart = 0;
+  const tempDate = new Date(startDate);
+
+  while (tempDate < now) {
+    tempDate.setMonth(tempDate.getMonth() + 1);
+    if (tempDate <= now) {
+      monthsSinceStart++;
+    }
+  }
+
+  const nextEMIMonth = monthsSinceStart;
 
   if (nextEMIMonth >= source.tenureMonths) {
     return null; // Loan completed
   }
 
-  const nextDueDate = getNextEMIDate(source.startDate, nextEMIMonth + 1);
+  const nextDueDate = getNextEMIDate(source.emiStartDate, nextEMIMonth);
+  nextDueDate.setHours(0, 0, 0, 0);
+
   const daysUntilDue = Math.ceil(
     (nextDueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
   );
@@ -135,7 +150,8 @@ export default function FundingSourcesPage() {
           fixedInterestAmount: data.fixedInterestAmount,
           tenureMonths: data.tenureMonths,
           emiAmount: data.emiAmount,
-          startDate: data.startDate?.toDate() || new Date(),
+          fundReceivedDate: data.fundReceivedDate?.toDate() || new Date(),
+          emiStartDate: data.emiStartDate?.toDate() || new Date(),
           status: data.status,
           bankName: data.bankName,
           lenderName: data.lenderName,

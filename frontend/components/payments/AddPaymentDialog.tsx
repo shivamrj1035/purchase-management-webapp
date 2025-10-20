@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import {
+  collection,
+  addDoc,
+  Timestamp,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuthStore } from "@/lib/store/authStore";
 import {
@@ -23,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { numberToIndianWords } from "@/lib/utils/numberToWords";
 
 interface AddPaymentDialogProps {
   open: boolean;
@@ -49,6 +59,62 @@ export default function AddPaymentDialog({
     transactionId: "",
     notes: "",
   });
+
+  // Calculate next due date when funding source is selected
+  useEffect(() => {
+    const calculateNextDueDate = async () => {
+      if (!formData.fundingSourceId || !user?.userId) return;
+
+      const selectedSource = fundingSources.find(
+        (s) => s.id === formData.fundingSourceId
+      );
+      if (!selectedSource) return;
+
+      try {
+        // Get the latest EMI payment for this funding source
+        const emiPaymentsRef = collection(
+          db,
+          "users",
+          user.userId,
+          "emiPayments"
+        );
+        const q = query(
+          emiPaymentsRef,
+          where("fundingSourceId", "==", formData.fundingSourceId),
+          orderBy("dueDate", "desc"),
+          limit(1)
+        );
+        const snapshot = await getDocs(q);
+
+        let nextDueDate = new Date();
+
+        if (!snapshot.empty) {
+          // Get the last due date and add 1 month
+          const lastPayment = snapshot.docs[0].data();
+          const lastDueDate = lastPayment.dueDate.toDate();
+          nextDueDate = new Date(lastDueDate);
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+        } else {
+          // If no payments exist, use the funding source start date
+          const startDate = selectedSource.startDate?.toDate() || new Date();
+          nextDueDate = new Date(startDate);
+          // Add 1 month to start date
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+        }
+
+        // Set the calculated due date and EMI amount
+        setFormData((prev) => ({
+          ...prev,
+          dueDate: nextDueDate.toISOString().split("T")[0],
+          amount: selectedSource.emiAmount?.toString() || "",
+        }));
+      } catch (error) {
+        console.error("Error calculating next due date:", error);
+      }
+    };
+
+    calculateNextDueDate();
+  }, [formData.fundingSourceId, fundingSources, user?.userId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +144,7 @@ export default function AddPaymentDialog({
         return;
       }
 
-      const paymentsRef = collection(db, "users", userId, "incomingPayments");
+      const paymentsRef = collection(db, "users", userId, "emiPayments");
       await addDoc(paymentsRef, {
         fundingSourceId: formData.fundingSourceId,
         fundingSourceName: selectedSource.sourceName,
@@ -174,6 +240,11 @@ export default function AddPaymentDialog({
                 className="bg-slate-800 border-slate-700 text-white"
                 required
               />
+              {formData.amount && parseFloat(formData.amount) > 0 && (
+                <p className="text-xs text-emerald-400 mt-1">
+                  {numberToIndianWords(formData.amount)}
+                </p>
+              )}
             </div>
 
             {/* Due Date */}

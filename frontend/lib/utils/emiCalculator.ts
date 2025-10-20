@@ -55,8 +55,48 @@ export function generateAmortizationSchedule(
   principal: number,
   annualRate: number,
   tenureMonths: number,
-  startDate: Date = new Date()
+  startDate: Date = new Date(),
+  interestType: "percentage" | "fixed_amount" | "none" = "percentage",
+  fixedInterestAmount = 0
 ): EMICalculation {
+  if (interestType === "fixed_amount") {
+    const amortizationSchedule: AmortizationRow[] = [];
+    const totalInterest = fixedInterestAmount * tenureMonths;
+
+    for (let month = 1; month <= tenureMonths; month++) {
+      const paymentDate = new Date(startDate);
+      paymentDate.setMonth(startDate.getMonth() + month - 1);
+
+      amortizationSchedule.push({
+        month,
+        emiAmount: fixedInterestAmount,
+        principalPaid: 0,
+        interestPaid: fixedInterestAmount,
+        principalBalance: principal,
+        paymentDate,
+      });
+    }
+
+    // Add a final row for principal payment at the end of the tenure
+    const finalPaymentDate = new Date(startDate);
+    finalPaymentDate.setMonth(startDate.getMonth() + tenureMonths);
+    amortizationSchedule.push({
+      month: tenureMonths + 1,
+      emiAmount: principal,
+      principalPaid: principal,
+      interestPaid: 0,
+      principalBalance: 0,
+      paymentDate: finalPaymentDate,
+    });
+
+    return {
+      emi: fixedInterestAmount,
+      totalInterest: totalInterest,
+      totalAmount: principal + totalInterest,
+      amortizationSchedule,
+    };
+  }
+
   const emi = calculateEMI(principal, annualRate, tenureMonths);
   const monthlyRate = annualRate / 12 / 100;
 
@@ -73,7 +113,7 @@ export function generateAmortizationSchedule(
 
     // Calculate payment date (add months to start date)
     const paymentDate = new Date(startDate);
-    paymentDate.setMonth(paymentDate.getMonth() + month);
+    paymentDate.setMonth(startDate.getMonth() + month - 1);
 
     amortizationSchedule.push({
       month,
