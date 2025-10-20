@@ -203,7 +203,32 @@ export function SendNotificationDialog({
     } catch (error: any) {
       console.error("Error sending notification:", error);
       const errorMessage = error?.message || "Failed to send notification";
-      toast.error(errorMessage);
+
+      // Provide helpful error messages based on error type
+      if (
+        errorMessage.includes("Network is unreachable") ||
+        errorMessage.includes("[Errno 101]")
+      ) {
+        toast.error(
+          "Email service unavailable. SMTP is blocked on this server. Please contact administrator to configure SendGrid.",
+          { duration: 6000 }
+        );
+      } else if (errorMessage.includes("SendGrid")) {
+        toast.error(
+          "SendGrid configuration error. Please verify API key in backend settings.",
+          { duration: 5000 }
+        );
+      } else if (
+        errorMessage.includes("authentication") ||
+        errorMessage.includes("credentials")
+      ) {
+        toast.error(
+          "Email authentication failed. Please check email configuration in notification settings.",
+          { duration: 5000 }
+        );
+      } else {
+        toast.error(errorMessage, { duration: 5000 });
+      }
 
       // Record failed trigger
       if (user?.userId) {
@@ -234,7 +259,8 @@ export function SendNotificationDialog({
           </DialogTitle>
           <DialogDescription className="text-slate-400 text-sm">
             Send email notification for selected EMI payment
-            {selectedEMIs.length > 1 ? "s" : ""}
+            {selectedEMIs.length > 1 ? "s" : ""}. Email will be sent via
+            SendGrid (production) or Gmail (local development).
           </DialogDescription>
         </DialogHeader>
 

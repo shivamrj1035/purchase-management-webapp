@@ -1,25 +1,54 @@
 """
-Email Service for sending notifications using Gmail SMTP
+Email Service for sending notifications using SendGrid or Gmail SMTP
 """
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import List, Optional
+from typing import List, Optional, Any
 import os
 from datetime import datetime
 
+try:
+    from sendgrid import SendGridAPIClient  # type: ignore[import-untyped]
+    from sendgrid.helpers.mail import Mail, Email, To, Content  # type: ignore[import-untyped]
+    SENDGRID_AVAILABLE = True
+except ImportError:
+    # Define placeholder types to avoid type-checking errors
+    SendGridAPIClient = None  # type: ignore[misc,assignment]
+    Mail = None  # type: ignore[misc,assignment]
+    Email = None  # type: ignore[misc,assignment]
+    To = None  # type: ignore[misc,assignment]
+    Content = None  # type: ignore[misc,assignment]
+    SENDGRID_AVAILABLE = False
+    print("⚠️ SendGrid not installed. Using Gmail SMTP (may not work on some hosting platforms)")
+    print("💡 Install SendGrid with: pip install sendgrid")
+
 class EmailService:
-    """Gmail SMTP Email Service"""
+    """Email Service with SendGrid (primary) and Gmail SMTP (fallback)"""
     
     def __init__(self):
+        # SendGrid configuration (preferred for production)
+        self.sendgrid_api_key = os.getenv("SENDGRID_API_KEY")
+        self.use_sendgrid = SENDGRID_AVAILABLE and bool(self.sendgrid_api_key)
+        
+        # Gmail SMTP configuration (fallback for local development)
         self.smtp_host = "smtp.gmail.com"
         self.smtp_port = 587
-        self.sender_email = os.getenv("GMAIL_EMAIL")
+        self.sender_email = os.getenv("GMAIL_EMAIL") or os.getenv("FROM_EMAIL")
         self.sender_password = os.getenv("GMAIL_APP_PASSWORD")
+        self.from_name = os.getenv("FROM_NAME", "Housing Management System")
         
-        # Don't raise error on init, just log warning
-        if not self.sender_email or not self.sender_password:
-            print("⚠️ WARNING: Gmail credentials not configured. Set GMAIL_EMAIL and GMAIL_APP_PASSWORD in .env")
+        # Determine which service to use
+        if self.use_sendgrid:
+            print("✅ SendGrid configured - Using SendGrid API for email delivery")
+            print(f"📧 Sender: {self.sender_email}")
+        elif self.sender_email and self.sender_password:
+            print("⚠️ Using Gmail SMTP (may not work on some hosting platforms like Render free tier)")
+            print(f"📧 Sender: {self.sender_email}")
+        else:
+            print("⚠️ WARNING: No email service configured")
+            print("💡 Option 1 (Recommended): Set SENDGRID_API_KEY and FROM_EMAIL in .env")
+            print("💡 Option 2: Set GMAIL_EMAIL and GMAIL_APP_PASSWORD in .env")
             print("📧 Email notifications will not work until configured.")
     
     def send_email(
@@ -30,7 +59,7 @@ class EmailService:
         cc_emails: Optional[List[str]] = None
     ) -> bool:
         """
-        Send email using Gmail SMTP
+        Send email using SendGrid API or Gmail SMTP
         
         Args:
             to_email: Primary recipient email
@@ -41,14 +70,80 @@ class EmailService:
         Returns:
             bool: True if email sent successfully
         """
+        if self.use_sendgrid:
+            return self._send_via_sendgrid(to_email, subject, html_content, cc_emails)
+        else:
+            return self._send_via_smtp(to_email, subject, html_content, cc_emails)
+    
+    def _send_via_sendgrid(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        cc_emails: Optional[List[str]] = None
+    ) -> bool:
+        """
+        Send email using SendGrid API
+        """
+        try:
+            print(f"📧 Sending email via SendGrid to {to_email}...")
+            
+            # Create SendGrid message
+            message = Mail(  # type: ignore[misc]
+                from_email=Email(self.sender_email, self.from_name),  # type: ignore[misc]
+                to_emails=To(to_email),  # type: ignore[misc]
+                subject=subject,
+                html_content=Content("text/html", html_content)  # type: ignore[misc]
+            )
+            
+            # Add CC recipients if provided
+            if cc_emails:
+                for cc_email in cc_emails:
+                    message.add_cc(Email(cc_email))  # type: ignore[misc]
+            
+            # Send email
+            sg = SendGridAPIClient(self.sendgrid_api_key)  # type: ignore[misc]
+            response = sg.send(message)
+            
+            print(f"✅ Email sent successfully via SendGrid (Status: {response.status_code})")
+            if cc_emails:
+                print(f"📋 CC sent to: {', '.join(cc_emails)}")
+            return True
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ SendGrid error: {error_msg}")
+            
+            # Provide helpful error messages
+            if "401" in error_msg or "Unauthorized" in error_msg:
+                raise ValueError("SendGrid API key is invalid. Please check SENDGRID_API_KEY in .env file")
+            elif "403" in error_msg or "Forbidden" in error_msg:
+                raise ValueError("SendGrid account issue. Please verify your SendGrid account is active")
+            else:
+                raise ValueError(f"SendGrid email failed: {error_msg}")
+    
+    def _send_via_smtp(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        cc_emails: Optional[List[str]] = None
+    ) -> bool:
+        """
+        Send email using Gmail SMTP (fallback method)
+        """
         # Check credentials before attempting to send
         if not self.sender_email or not self.sender_password:
-            raise ValueError("Gmail credentials not configured. Please set GMAIL_EMAIL and GMAIL_APP_PASSWORD in backend/.env file")
+            raise ValueError(
+                "Email service not configured. "
+                "Option 1: Set SENDGRID_API_KEY and FROM_EMAIL in .env (recommended for production). "
+                "Option 2: Set GMAIL_EMAIL and GMAIL_APP_PASSWORD in .env (local development only)"
+            )
         
         try:
             # Create message
             message = MIMEMultipart("alternative")
-            message["From"] = self.sender_email
+            message["From"] = f"{self.from_name} <{self.sender_email}>"
             message["To"] = to_email
             message["Subject"] = subject
             
@@ -64,9 +159,9 @@ class EmailService:
             if cc_emails:
                 recipients.extend(cc_emails)
             
-            # Connect to Gmail SMTP server
+            # Connect to Gmail SMTP server with timeout
             print(f"📧 Connecting to {self.smtp_host}:{self.smtp_port}...")
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+            with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=30) as server:
                 server.starttls()  # Upgrade to secure connection
                 print(f"🔐 Logging in as {self.sender_email}...")
                 server.login(self.sender_email, self.sender_password)
@@ -83,9 +178,19 @@ class EmailService:
             print("💡 Make sure you're using an App Password, not your regular Gmail password")
             print("📖 See: https://myaccount.google.com/apppasswords")
             raise ValueError("Gmail authentication failed. Please check your GMAIL_EMAIL and GMAIL_APP_PASSWORD in .env file. Make sure you're using an App Password, not your regular password.")
-        except smtplib.SMTPException as e:
-            print(f"❌ SMTP error: {str(e)}")
-            raise ValueError(f"Email sending failed: {str(e)}")
+        except (smtplib.SMTPException, OSError, ConnectionError) as e:
+            error_msg = str(e)
+            print(f"❌ SMTP error: {error_msg}")
+            
+            # Check if it's a network issue (common on Render free tier)
+            if "Network is unreachable" in error_msg or "[Errno 101]" in error_msg:
+                raise ValueError(
+                    "SMTP connection blocked by hosting provider. "
+                    "Gmail SMTP doesn't work on Render free tier. "
+                    "Please use SendGrid instead: Set SENDGRID_API_KEY and FROM_EMAIL in environment variables."
+                )
+            else:
+                raise ValueError(f"Email sending failed: {error_msg}")
         except Exception as e:
             print(f"❌ Error sending email: {str(e)}")
             raise ValueError(f"Unexpected error sending email: {str(e)}")
@@ -213,7 +318,7 @@ class EmailService:
         </head>
         <body>
             <div class="header">
-                <h1>🏠 Housing Management</h1>
+                <h1>🏠 Property Purchase Management</h1>
                 <p>EMI Payment Reminder</p>
             </div>
             
@@ -264,10 +369,10 @@ class EmailService:
             </div>
             
             <div class="footer">
-                <p>This is an automated reminder from your Housing Management System</p>
+                <p>This is an automated reminder from your Property Purchase Management System</p>
                 <p>Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
                 <p style="margin-top: 15px;">
-                    © 2025 Housing Management System. All rights reserved.
+                    © 2025 Property Purchase Management System. All rights reserved.
                 </p>
             </div>
         </body>
@@ -402,7 +507,7 @@ class EmailService:
         </head>
         <body>
             <div class="header">
-                <h1>🏠 Housing Management</h1>
+                <h1>🏠 Property Purchase Management</h1>
                 <p>Multiple EMI Payments Due</p>
             </div>
             
@@ -426,7 +531,7 @@ class EmailService:
             </div>
             
             <div class="footer">
-                <p>This is an automated reminder from your Housing Management System</p>
+                <p>This is an automated reminder from your Property Purchase Management System</p>
                 <p>Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
             </div>
         </body>
