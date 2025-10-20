@@ -66,7 +66,9 @@ export default function ViewFundingSourceDialog({
         source.principalAmount,
         source.interestRate,
         source.tenureMonths,
-        source.startDate
+        source.emiStartDate,
+        source.interestType,
+        source.fixedInterestAmount
       )
     : null;
 
@@ -137,15 +139,22 @@ export default function ViewFundingSourceDialog({
                 <div>
                   <p className="text-sm text-slate-400">Principal Amount</p>
                   <p className="text-lg font-semibold text-white flex items-center mt-1">
-                    <IndianRupee className="h-4 w-4 mr-1" />
+                    {/* <IndianRupee className="h-4 w-4 mr-1" /> */}
                     {formatCurrency(source.principalAmount)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-400">Start Date</p>
+                  <p className="text-sm text-slate-400">Fund Received Date</p>
                   <p className="text-lg font-semibold text-white flex items-center mt-1">
                     <Calendar className="h-4 w-4 mr-1" />
-                    {formatDate(source.startDate)}
+                    {formatDate(source.fundReceivedDate)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">EMI Start Date</p>
+                  <p className="text-lg font-semibold text-white flex items-center mt-1">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    {formatDate(source.emiStartDate)}
                   </p>
                 </div>
               </div>
@@ -217,7 +226,7 @@ export default function ViewFundingSourceDialog({
                     <div>
                       <p className="text-sm text-slate-400">Monthly EMI</p>
                       <p className="text-lg font-semibold text-emerald-500 flex items-center mt-1">
-                        <IndianRupee className="h-4 w-4 mr-1" />
+                        {/* <IndianRupee className="h-4 w-4 mr-1" /> */}
                         {formatCurrency(source.emiAmount)}
                       </p>
                     </div>
@@ -228,7 +237,7 @@ export default function ViewFundingSourceDialog({
                             Total Interest
                           </p>
                           <p className="text-lg font-semibold text-amber-500 flex items-center mt-1">
-                            <IndianRupee className="h-4 w-4 mr-1" />
+                            {/* <IndianRupee className="h-4 w-4 mr-1" /> */}
                             {formatCurrency(amortizationData.totalInterest)}
                           </p>
                         </div>
@@ -237,7 +246,7 @@ export default function ViewFundingSourceDialog({
                       <div>
                         <p className="text-sm text-slate-400">Total Interest</p>
                         <p className="text-lg font-semibold text-amber-500 flex items-center mt-1">
-                          <IndianRupee className="h-4 w-4 mr-1" />
+                          {/* <IndianRupee className="h-4 w-4 mr-1" /> */}
                           {formatCurrency(
                             (source.fixedInterestAmount || 0) *
                               source.tenureMonths
@@ -247,7 +256,7 @@ export default function ViewFundingSourceDialog({
                     )}
                   </div>
 
-                  {(source.bankName || source.lenderName) && (
+                  {(source.bankName) && (
                     <div className="mt-4 pt-4 border-t border-slate-700">
                       <div className="grid grid-cols-2 gap-4">
                         {source.bankName && (
@@ -256,17 +265,6 @@ export default function ViewFundingSourceDialog({
                             <p className="text-sm text-white mt-1 flex items-center">
                               <CreditCard className="h-4 w-4 mr-2" />
                               {source.bankName}
-                            </p>
-                          </div>
-                        )}
-                        {source.lenderName && (
-                          <div>
-                            <p className="text-sm text-slate-400">
-                              Lender Name
-                            </p>
-                            <p className="text-sm text-white mt-1 flex items-center">
-                              <User className="h-4 w-4 mr-2" />
-                              {source.lenderName}
                             </p>
                           </div>
                         )}

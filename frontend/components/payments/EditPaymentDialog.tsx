@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { doc, updateDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -54,6 +54,20 @@ export default function EditPaymentDialog({
     notes: payment.notes || "",
   });
 
+  // Update form data when payment prop changes
+  useEffect(() => {
+    setFormData({
+      fundingSourceId: payment.fundingSourceId,
+      dueDate: payment.dueDate.toISOString().split("T")[0],
+      amount: payment.amount.toString(),
+      status: payment.status,
+      paymentDate: payment.paymentDate.toISOString().split("T")[0],
+      paymentMethod: payment.paymentMethod || "",
+      transactionId: payment.transactionId || "",
+      notes: payment.notes || "",
+    });
+  }, [payment]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -72,13 +86,7 @@ export default function EditPaymentDialog({
         (s) => s.id === formData.fundingSourceId
       );
 
-      const paymentRef = doc(
-        db,
-        "users",
-        userId,
-        "incomingPayments",
-        payment.id
-      );
+      const paymentRef = doc(db, "users", userId, "emiPayments", payment.id);
       await updateDoc(paymentRef, {
         fundingSourceId: formData.fundingSourceId,
         fundingSourceName:
@@ -127,11 +135,18 @@ export default function EditPaymentDialog({
               }
             >
               <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                <SelectValue />
+                <SelectValue placeholder="Select funding source">
+                  {fundingSources.find((s) => s.id === formData.fundingSourceId)
+                    ?.sourceName || "Select funding source"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-700 text-white">
                 {fundingSources
-                  .filter((s) => s.sourceType === "bank_loan")
+                  .filter(
+                    (s) =>
+                      s.sourceType === "bank_loan" ||
+                      s.sourceType === "personal_loan"
+                  )
                   .map((source) => (
                     <SelectItem key={source.id} value={source.id}>
                       {source.sourceName}

@@ -39,3 +39,24 @@ export interface OutgoingPayment {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Funding Source
+export interface FundingSource {
+  id: string;
+  sourceName: string;
+  sourceType: string;
+  principalAmount: number;
+  interestType: string;
+  interestRate: number;
+  tenureMonths: number;
+  emiAmount: number;
+  fundReceivedDate: Date;
+  emiStartDate: Date;
+  status: string;
+  bankName?: string;
+  lenderName?: string;
+  accountNumber?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

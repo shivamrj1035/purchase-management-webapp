@@ -52,10 +52,10 @@ export default function AddFundingSourceDialog({
     interestRate: "",
     fixedInterestAmount: "",
     tenureMonths: "",
-    startDate: new Date().toISOString().split("T")[0],
+    fundReceivedDate: new Date().toISOString().split("T")[0],
+    emiStartDate: new Date().toISOString().split("T")[0],
     status: "active" as "active" | "closed" | "pending",
     bankName: "",
-    lenderName: "",
     accountNumber: "",
     notes: "",
   });
@@ -134,10 +134,10 @@ export default function AddFundingSourceDialog({
             : 0,
         tenureMonths: tenure,
         emiAmount: emiAmount,
-        startDate: Timestamp.fromDate(new Date(formData.startDate)),
+        fundReceivedDate: Timestamp.fromDate(new Date(formData.fundReceivedDate)),
+        emiStartDate: Timestamp.fromDate(new Date(formData.emiStartDate)),
         status: formData.status,
         bankName: formData.bankName || null,
-        lenderName: formData.lenderName || null,
         accountNumber: formData.accountNumber || null,
         notes: formData.notes || null,
         createdAt: Timestamp.now(),
@@ -157,10 +157,10 @@ export default function AddFundingSourceDialog({
         interestRate: "",
         fixedInterestAmount: "",
         tenureMonths: "",
-        startDate: new Date().toISOString().split("T")[0],
+        fundReceivedDate: new Date().toISOString().split("T")[0],
+        emiStartDate: new Date().toISOString().split("T")[0],
         status: "active",
         bankName: "",
-        lenderName: "",
         accountNumber: "",
         notes: "",
       });
@@ -379,22 +379,6 @@ export default function AddFundingSourceDialog({
                 </div>
               )}
 
-              {/* Lender Name (for personal loans) */}
-              {isPersonalLoan && (
-                <div className="space-y-2">
-                  <Label htmlFor="lenderName">Lender Name</Label>
-                  <Input
-                    id="lenderName"
-                    placeholder="e.g., John Doe"
-                    value={formData.lenderName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, lenderName: e.target.value })
-                    }
-                    className="bg-slate-800 border-slate-700 text-white"
-                  />
-                </div>
-              )}
-
               {/* Account Number (for bank loans) */}
               {isBankLoan && (
                 <div className="space-y-2">
@@ -417,15 +401,29 @@ export default function AddFundingSourceDialog({
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Start Date */}
+            {/* Fund Received Date */}
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="fundReceivedDate">Fund Received Date</Label>
               <Input
-                id="startDate"
+                id="fundReceivedDate"
                 type="date"
-                value={formData.startDate}
+                value={formData.fundReceivedDate}
                 onChange={(e) =>
-                  setFormData({ ...formData, startDate: e.target.value })
+                  setFormData({ ...formData, fundReceivedDate: e.target.value })
+                }
+                className="bg-slate-800 border-slate-700 text-white"
+              />
+            </div>
+
+            {/* EMI Start Date */}
+            <div className="space-y-2">
+              <Label htmlFor="emiStartDate">EMI Start Date</Label>
+              <Input
+                id="emiStartDate"
+                type="date"
+                value={formData.emiStartDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, emiStartDate: e.target.value })
                 }
                 className="bg-slate-800 border-slate-700 text-white"
               />

@@ -21,7 +21,7 @@ export interface FundingSource {
   fixedInterestAmount?: number;
   tenureMonths: number;
   emiAmount: number;
-  startDate: Date;
+  emiStartDate: Date;
   status: string;
 }
 
@@ -42,7 +42,7 @@ export interface EMIPayment {
  */
 function calculateDueDate(startDate: Date, monthNumber: number): Date {
   const dueDate = new Date(startDate);
-  dueDate.setMonth(dueDate.getMonth() + monthNumber);
+  dueDate.setMonth(dueDate.getMonth() + monthNumber - 1);
   return dueDate;
 }
 
@@ -96,7 +96,7 @@ export async function generateEMIPayments(
 
   // Calculate which month we're in
   const monthsSinceStart = Math.floor(
-    (now.getTime() - fundingSource.startDate.getTime()) /
+    (now.getTime() - fundingSource.emiStartDate.getTime()) /
       (1000 * 60 * 60 * 24 * 30)
   );
 
@@ -106,7 +106,7 @@ export async function generateEMIPayments(
     monthNum < fundingSource.tenureMonths;
     monthNum++
   ) {
-    const dueDate = calculateDueDate(fundingSource.startDate, monthNum + 1);
+    const dueDate = calculateDueDate(fundingSource.emiStartDate, monthNum + 1);
 
     // Only create if due date is within next 30 days or overdue
     if (dueDate <= thirtyDaysFromNow) {
@@ -171,7 +171,7 @@ export async function generateAllEMIPayments(userId: string): Promise<number> {
       fixedInterestAmount: data.fixedInterestAmount,
       tenureMonths: data.tenureMonths,
       emiAmount: data.emiAmount,
-      startDate: data.startDate?.toDate() || new Date(),
+      emiStartDate: data.emiStartDate?.toDate() || new Date(),
       status: data.status,
     };
 
