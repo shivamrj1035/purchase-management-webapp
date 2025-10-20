@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/lib/store/authStore";
 import { Settings as SettingsIcon, User, Bell, Database } from "lucide-react";
 import { toast } from "sonner";
+import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 
 export default function SettingsPage() {
   const { user, updateUser } = useAuthStore();
@@ -25,6 +26,7 @@ export default function SettingsPage() {
     phoneNumber: user?.phoneNumber || "",
     homeAddress: user?.homeAddress || "",
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,6 +229,7 @@ export default function SettingsPage() {
               </div>
               <Button
                 variant="outline"
+                onClick={() => setDeleteDialogOpen(true)}
                 className="border-red-500/50 text-red-400 hover:bg-red-500/10"
               >
                 Delete
@@ -245,6 +248,12 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Account Dialog */}
+      <DeleteAccountDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      />
     </div>
   );
 }
