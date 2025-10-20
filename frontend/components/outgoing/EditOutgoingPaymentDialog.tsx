@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { OutgoingPayment } from "@/lib/types/payment";
+import { numberToIndianWords } from "@/lib/utils/numberToWords";
 
 interface EditOutgoingPaymentDialogProps {
   open: boolean;
@@ -153,6 +154,11 @@ export default function EditOutgoingPaymentDialog({
                 className="bg-slate-800 border-slate-700 text-white"
                 required
               />
+              {formData.amount && parseFloat(formData.amount) > 0 && (
+                <p className="text-xs text-emerald-400 mt-1">
+                  {numberToIndianWords(formData.amount)}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

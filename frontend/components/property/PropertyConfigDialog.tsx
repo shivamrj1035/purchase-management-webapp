@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/emiCalculator";
 import { IndianRupee, Calculator } from "lucide-react";
+import { numberToIndianWords } from "@/lib/utils/numberToWords";
 
 interface PropertyConfigDialogProps {
   open: boolean;
@@ -209,6 +210,11 @@ function PropertyConfigDialog({
                 className="bg-slate-800 border-slate-700 text-white"
                 required
               />
+              {formData.purchasePrice && parseFloat(formData.purchasePrice) > 0 && (
+                <p className="text-xs text-emerald-400 mt-1">
+                  {numberToIndianWords(formData.purchasePrice)}
+                </p>
+              )}
             </div>
           </div>
 
@@ -235,6 +241,11 @@ function PropertyConfigDialog({
                   }
                   className="bg-slate-800 border-slate-700 text-white"
                 />
+                {formData.registrationFees && parseFloat(formData.registrationFees) > 0 && (
+                  <p className="text-xs text-emerald-400 mt-1">
+                    {numberToIndianWords(formData.registrationFees)}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -250,6 +261,11 @@ function PropertyConfigDialog({
                   }
                   className="bg-slate-800 border-slate-700 text-white"
                 />
+                {formData.stampDuty && parseFloat(formData.stampDuty) > 0 && (
+                  <p className="text-xs text-emerald-400 mt-1">
+                    {numberToIndianWords(formData.stampDuty)}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -265,6 +281,11 @@ function PropertyConfigDialog({
                   }
                   className="bg-slate-800 border-slate-700 text-white"
                 />
+                {formData.legalFees && parseFloat(formData.legalFees) > 0 && (
+                  <p className="text-xs text-emerald-400 mt-1">
+                    {numberToIndianWords(formData.legalFees)}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -280,6 +301,11 @@ function PropertyConfigDialog({
                   }
                   className="bg-slate-800 border-slate-700 text-white"
                 />
+                {formData.brokerageFees && parseFloat(formData.brokerageFees) > 0 && (
+                  <p className="text-xs text-emerald-400 mt-1">
+                    {numberToIndianWords(formData.brokerageFees)}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -295,6 +321,11 @@ function PropertyConfigDialog({
                   }
                   className="bg-slate-800 border-slate-700 text-white"
                 />
+                {formData.otherFees && parseFloat(formData.otherFees) > 0 && (
+                  <p className="text-xs text-emerald-400 mt-1">
+                    {numberToIndianWords(formData.otherFees)}
+                  </p>
+                )}
               </div>
             </div>
           </div>

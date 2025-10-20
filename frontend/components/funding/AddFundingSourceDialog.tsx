@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { calculateEMI } from "@/lib/utils/emiCalculator";
+import { numberToIndianWords } from "@/lib/utils/numberToWords";
 
 interface AddFundingSourceDialogProps {
   open: boolean;
@@ -246,6 +247,12 @@ export default function AddFundingSourceDialog({
               className="bg-slate-800 border-slate-700 text-white"
               required
             />
+            {formData.principalAmount &&
+              parseFloat(formData.principalAmount) > 0 && (
+                <p className="text-xs text-emerald-400 mt-1">
+                  {numberToIndianWords(formData.principalAmount)}
+                </p>
+              )}
           </div>
 
           {/* Loan specific fields (Bank or Personal) */}
@@ -344,6 +351,12 @@ export default function AddFundingSourceDialog({
                     className="bg-slate-800 border-slate-700 text-white"
                     required
                   />
+                  {formData.fixedInterestAmount &&
+                    parseFloat(formData.fixedInterestAmount) > 0 && (
+                      <p className="text-xs text-emerald-400 mt-1">
+                        {numberToIndianWords(formData.fixedInterestAmount)}
+                      </p>
+                    )}
                   <p className="text-xs text-slate-400">
                     Principal amount will be paid at the end of tenure.
                   </p>

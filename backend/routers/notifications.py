@@ -2,8 +2,8 @@
 Notifications Router
 Handles notification configuration and email triggers
 """
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, HTTPException, Depends  # pyright: ignore[reportMissingImports]
+from pydantic import BaseModel, EmailStr  # pyright: ignore[reportMissingImports]
 from typing import List, Optional
 from datetime import datetime
 import sys

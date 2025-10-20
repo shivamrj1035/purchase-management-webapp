@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { calculateEMI } from "@/lib/utils/emiCalculator";
 import { FundingSource } from "@/app/dashboard/funding-sources/page";
+import { numberToIndianWords } from "@/lib/utils/numberToWords";
 
 interface EditFundingSourceDialogProps {
   open: boolean;
@@ -249,6 +250,12 @@ export default function EditFundingSourceDialog({
               className="bg-slate-800 border-slate-700 text-white"
               required
             />
+            {formData.principalAmount &&
+              parseFloat(formData.principalAmount) > 0 && (
+                <p className="text-xs text-emerald-400 mt-1">
+                  {numberToIndianWords(formData.principalAmount)}
+                </p>
+              )}
           </div>
 
           {/* Loan specific fields (Bank or Personal) */}
@@ -340,6 +347,12 @@ export default function EditFundingSourceDialog({
                     className="bg-slate-800 border-slate-700 text-white"
                     required
                   />
+                  {formData.fixedInterestAmount &&
+                    parseFloat(formData.fixedInterestAmount) > 0 && (
+                      <p className="text-xs text-emerald-400 mt-1">
+                        {numberToIndianWords(formData.fixedInterestAmount)}
+                      </p>
+                    )}
                 </div>
               )}
 
