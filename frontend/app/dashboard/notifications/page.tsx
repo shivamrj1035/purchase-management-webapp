@@ -129,20 +129,20 @@ export default function NotificationsPage() {
     if (!user?.email || !user?.username) return;
 
     try {
+      // Get API URL from environment
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
       setTestingSending(true);
-      const response = await fetch(
-        "http://localhost:8000/api/notifications/test-email",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userEmail: emailConfig.primaryEmail,
-            userName: user.username,
-          }),
-        }
-      );
+      const response = await fetch(`${apiUrl}/api/notifications/test-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userEmail: emailConfig.primaryEmail,
+          userName: user.username,
+        }),
+      });
 
       if (response.ok) {
         toast.success("Test email sent successfully! Check your inbox.");

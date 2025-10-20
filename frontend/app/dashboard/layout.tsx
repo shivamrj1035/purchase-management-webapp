@@ -1,27 +1,36 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNav } from "@/components/layout/TopNav";
+import Cookies from "js-cookie";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const { isAuthenticated } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
+    // Check if auth token exists in cookie
+    const token = Cookies.get("auth-token");
+    if (token) {
+      setIsLoading(false);
+    } else if (!isAuthenticated) {
+      // Only redirect if both token and isAuthenticated are false
+      // This prevents redirect during Zustand rehydration
+      setIsLoading(false);
+    } else {
+      setIsLoading(false);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated]);
 
-  if (!isAuthenticated) {
+  // Show loading state while checking authentication
+  if (isLoading) {
     return null;
   }
 
