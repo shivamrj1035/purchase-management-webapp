@@ -15,7 +15,7 @@ export function ConfigurationAlert() {
 
   useEffect(() => {
     if (user?.userId) {
-      loadPropertyDetails(user.userId);
+      loadPropertyDetails();
     }
   }, [user?.userId, loadPropertyDetails]);
 

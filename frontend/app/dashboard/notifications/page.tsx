@@ -129,11 +129,8 @@ export default function NotificationsPage() {
     if (!user?.email || !user?.username) return;
 
     try {
-      // Get API URL from environment
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
       setTestingSending(true);
-      const response = await fetch(`${apiUrl}/api/notifications/test-email`, {
+      const response = await fetch("/api/notifications/test-email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

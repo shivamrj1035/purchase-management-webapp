@@ -59,7 +59,7 @@ export default function AnalyticsPage() {
       setLoading(true);
       if (user?.userId) {
         await Promise.all([
-          loadPropertyDetails(user.userId),
+          loadPropertyDetails(),
           loadBorrows(),
           loadPayments(),
         ]);

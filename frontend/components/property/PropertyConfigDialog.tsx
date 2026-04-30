@@ -116,8 +116,7 @@ function PropertyConfigDialog({
           brokerageFees: parseFloat(formData.brokerageFees) || 0,
           otherFees: parseFloat(formData.otherFees) || 0,
           totalCost: totalCost,
-        },
-        user.userId
+        }
       );
 
       toast.success("Property configuration saved to your account");

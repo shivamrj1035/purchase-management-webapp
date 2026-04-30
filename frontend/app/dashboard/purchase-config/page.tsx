@@ -31,7 +31,7 @@ export default function PurchaseConfigPage() {
   // Load property details from Firebase on mount
   useEffect(() => {
     if (user?.userId) {
-      loadPropertyDetails(user.userId);
+      loadPropertyDetails();
     }
   }, [user?.userId, loadPropertyDetails]);
 

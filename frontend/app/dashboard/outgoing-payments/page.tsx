@@ -42,7 +42,7 @@ export default function OutgoingPaymentsPage() {
 
   useEffect(() => {
     if (user?.userId) {
-      loadPropertyDetails(user.userId);
+      loadPropertyDetails();
     }
   }, [user?.userId, loadPropertyDetails]);
 
