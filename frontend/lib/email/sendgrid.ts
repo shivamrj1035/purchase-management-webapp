@@ -24,7 +24,6 @@ export class EmailService {
       this.useSendGrid = true;
     } else {
       this.useSendGrid = false;
-      console.warn("⚠️ SendGrid not installed or no API key provided. Using Gmail SMTP (may not work on some hosting platforms)");
     }
 
     this.senderEmail = process.env.GMAIL_EMAIL || process.env.FROM_EMAIL || "";
@@ -52,7 +51,7 @@ export class EmailService {
     ccEmails?: string[]
   ): Promise<boolean> {
     try {
-      console.log(`📧 Sending email via SendGrid to ${toEmail}...`);
+      console.log(`Sending email via SendGrid to ${toEmail}...`);
       const msg: sgMail.MailDataRequired = {
         to: toEmail,
         from: {
@@ -68,10 +67,10 @@ export class EmailService {
       }
 
       await sgMail.send(msg);
-      console.log(`✅ Email sent successfully via SendGrid`);
+      console.log("Email sent successfully via SendGrid");
       return true;
     } catch (error: any) {
-      console.error(`❌ SendGrid error:`, error);
+      console.error("SendGrid error:", error);
       if (error.response) {
         console.error(error.response.body);
       }
@@ -92,7 +91,7 @@ export class EmailService {
     }
 
     try {
-      console.log(`📧 Connecting to ${this.smtpHost}:${this.smtpPort}...`);
+      console.log(`Connecting to ${this.smtpHost}:${this.smtpPort}...`);
       const transporter = nodemailer.createTransport({
         host: this.smtpHost,
         port: this.smtpPort,
@@ -115,10 +114,10 @@ export class EmailService {
       }
 
       await transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent successfully to ${toEmail}`);
+      console.log(`Email sent successfully to ${toEmail}`);
       return true;
     } catch (error: any) {
-      console.error(`❌ SMTP error:`, error);
+      console.error("SMTP error:", error);
       throw new Error(`Email sending failed: ${error.message}`);
     }
   }
