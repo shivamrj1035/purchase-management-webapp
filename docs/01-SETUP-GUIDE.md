@@ -5,7 +5,7 @@ This guide will walk you through setting up the complete development environment
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Firebase Setup](#firebase-setup)
+2. [Clerk & Google Sheets Setup](#clerk--google-sheets-setup)
 3. [Frontend Setup](#frontend-setup)
 4. [Backend Setup](#backend-setup)
 5. [Environment Variables](#environment-variables)
@@ -25,7 +25,8 @@ This guide will walk you through setting up the complete development environment
 
 ### Required Accounts
 
-- **Firebase**: Create account at [firebase.google.com](https://firebase.google.com/)
+- **Clerk**: Create account at [clerk.com](https://clerk.com/) (for authentication)
+- **Google Cloud**: Create account at [console.cloud.google.com](https://console.cloud.google.com/) (for Google Sheets API)
 - **SendGrid**: Create account at [sendgrid.com](https://sendgrid.com/) (for email functionality)
 - **Vercel**: Optional, for deployment ([vercel.com](https://vercel.com/))
 
@@ -47,57 +48,18 @@ pip --version
 
 ---
 
-## Firebase Setup
+## Clerk & Google Sheets Setup
 
-### 1. Create Firebase Project
+### 1. Clerk Authentication
+1. Go to Clerk dashboard
+2. Create an application
+3. Copy API keys
 
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Click **"Add Project"**
-3. Enter project name: `housing-management` (or your preferred name)
-4. Disable Google Analytics (optional for this project)
-5. Click **"Create Project"**
-
-### 2. Enable Firestore Database
-
-1. In Firebase Console, go to **Build** → **Firestore Database**
-2. Click **"Create database"**
-3. Select **"Start in test mode"** (we'll add security rules later)
-4. Choose your preferred location (e.g., `us-central1`)
-5. Click **"Enable"**
-
-### 3. Get Firebase Configuration
-
-1. Go to **Project Settings** (gear icon) → **General**
-2. Scroll to **"Your apps"** section
-3. Click **"Web"** icon (</>) to add a web app
-4. Register app with nickname: `housing-management-web`
-5. Copy the Firebase configuration object (you'll need this later)
-
-```javascript
-// Example configuration (yours will be different)
-const firebaseConfig = {
-  apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  authDomain: "housing-management.firebaseapp.com",
-  projectId: "housing-management",
-  storageBucket: "housing-management.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abcdef1234567890",
-};
-```
-
-### 4. Enable Authentication
-
-1. Go to **Build** → **Authentication**
-2. Click **"Get started"**
-3. Enable **"Email/Password"** sign-in method
-4. Save changes
-
-### 5. Download Service Account Key (for Backend)
-
-1. Go to **Project Settings** → **Service accounts**
-2. Click **"Generate new private key"**
-3. Save the JSON file as `firebase-adminsdk.json`
-4. **IMPORTANT**: Keep this file secure and never commit to Git
+### 2. Google Sheets API
+1. Go to Google Cloud Console
+2. Enable Google Sheets API
+3. Create Service Account and download JSON key
+4. Share your target spreadsheet with the service account email
 
 ---
 
@@ -128,7 +90,7 @@ When prompted, choose:
 cd frontend
 
 # Core dependencies
-npm install firebase
+npm install @clerk/nextjs googleapis
 npm install zustand
 npm install @tanstack/react-table
 npm install recharts
@@ -175,16 +137,24 @@ npx shadcn-ui@latest add sheet
 touch .env.local  # On Windows: type nul > .env.local
 ```
 
-Add the following content (replace with your Firebase config):
+Add the following content (replace with your Clerk & Google Sheets config):
 
 ```env
-# Firebase Configuration
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_publishable_key
+CLERK_SECRET_KEY=your_secret_key
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+
+# Google Sheets Service Account
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+"
+GOOGLE_MASTER_SPREADSHEET_ID=your_spreadsheet_id
 
 # Backend API URL
 NEXT_PUBLIC_API_URL=http://localhost:8000
@@ -229,7 +199,7 @@ uvicorn[standard]==0.24.0
 python-dotenv==1.0.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
-firebase-admin==6.3.0
+httpx==0.27.0
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
@@ -257,28 +227,23 @@ SECRET_KEY=your-secret-key-change-this-in-production-min-32-chars
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=10080  # 7 days
 
-# Firebase Admin SDK
-FIREBASE_CREDENTIALS_PATH=./firebase-adminsdk.json
+# Clerk Configuration
+CLERK_JWKS_URL=https://clerk.your-domain.com/.well-known/jwks.json
+CLERK_ISSUER=https://clerk.your-domain.com
+CLERK_AUDIENCE=your-client-id
 
-# SendGrid Configuration
-SENDGRID_API_KEY=your_sendgrid_api_key
-SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-SENDGRID_FROM_NAME=Housing Management Platform
-
-# Email Reminder Settings
-REMINDER_CRON_HOUR=6  # 6 AM
-REMINDER_CRON_MINUTE=0
-
-# CORS Settings (for development)
-ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-
-# Database
-FIRESTORE_COLLECTION_USERS=users
+# Email Configuration (Gmail SMTP)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+FROM_EMAIL=your-email@gmail.com
+FROM_NAME=Housing Management Platform
 ```
 
-### 6. Add Firebase Service Account Key
+### 6. Add Google Service Account Key
 
-1. Copy the `firebase-adminsdk.json` file you downloaded earlier
+1. Copy the `service-account-key.json` file you downloaded earlier
 2. Place it in the `backend/` directory
 3. **Add to .gitignore** (very important!)
 
@@ -300,7 +265,7 @@ ENV/
 .env.local
 
 # Firebase credentials
-firebase-adminsdk.json
+service-account-key.json
 *.json
 
 # IDE
@@ -348,7 +313,7 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
 
 # Firebase
-FIREBASE_CREDENTIALS_PATH=./firebase-adminsdk.json
+FIREBASE_CREDENTIALS_PATH=./service-account-key.json
 
 # SendGrid
 SENDGRID_API_KEY=

@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { doc, updateDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-import { useAuthStore } from "@/lib/store/authStore";
+import { useBorrowStore } from "@/lib/store/borrowStore";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +38,7 @@ export default function EditFundingSourceDialog({
   source,
   onSuccess,
 }: EditFundingSourceDialogProps) {
-  const { user } = useAuthStore();
+  const { updateBorrow } = useBorrowStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     sourceName: source.sourceName,
@@ -85,7 +83,6 @@ export default function EditFundingSourceDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
 
     try {
       setLoading(true);
@@ -139,32 +136,23 @@ export default function EditFundingSourceDialog({
         }
       }
 
-      const sourceRef = doc(
-        db,
-        "users",
-        user.userId,
-        "fundingSources",
-        source.id
-      );
-      await updateDoc(sourceRef, {
-        sourceName: formData.sourceName,
-        sourceType: formData.sourceType,
+      await updateBorrow({
+        id: source.id,
+        name: formData.sourceName,
+        type: formData.sourceType,
         principalAmount: principal,
         interestType: formData.interestType,
         interestRate: rate,
-        fixedInterestAmount:
-          formData.interestType === "fixed_amount"
-            ? parseFloat(formData.fixedInterestAmount)
-            : 0,
         tenureMonths: tenure,
         emiAmount: emiAmount,
-        fundReceivedDate: Timestamp.fromDate(new Date(formData.fundReceivedDate)),
-        emiStartDate: Timestamp.fromDate(new Date(formData.emiStartDate)),
+        startDate: formData.emiStartDate,
         status: formData.status,
-        bankName: formData.bankName || null,
-        accountNumber: formData.accountNumber || null,
-        notes: formData.notes || null,
-        updatedAt: Timestamp.now(),
+        bankName: formData.bankName || '',
+        lenderName: '',
+        accountNumber: formData.accountNumber || '',
+        notes: formData.notes || '',
+        createdAt: source.createdAt.toISOString(),
+        updatedAt: new Date().toISOString(),
       });
 
       toast.success("Funding source updated successfully");

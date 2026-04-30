@@ -2,7 +2,7 @@
 
 import { Menu, Bell, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -12,36 +12,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuthStore } from "@/lib/store/authStore";
-import { useNotificationStore } from "@/lib/store/notificationStore";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
-import { useEffect } from "react";
 
 interface TopNavProps {
   onMenuClick?: () => void;
 }
 
 export function TopNav({ onMenuClick }: TopNavProps) {
-  const { user, logout } = useAuthStore();
-  const { unreadCount, loadNotifications } = useNotificationStore();
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const router = useRouter();
 
-  // Load notifications on mount
-  useEffect(() => {
-    if (user?.userId) {
-      loadNotifications(user.userId);
-    }
-  }, [user, loadNotifications]);
+  const displayName = user?.firstName || user?.username || "User";
+  const email = user?.primaryEmailAddress?.emailAddress || "";
+  const initials = displayName.charAt(0).toUpperCase();
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      logout();
+      await signOut();
       toast.success("Logged out successfully");
-      router.push("/login");
+      router.push("/");
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("Failed to logout");
@@ -61,7 +53,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
         </Button>
         <div className="min-w-0">
           <h2 className="text-sm md:text-lg font-semibold text-white truncate">
-            Welcome back, {user?.username || "User"}
+            Welcome back, {displayName}
           </h2>
           <p className="text-xs text-slate-400 hidden sm:block">
             Manage your home buying journey
@@ -77,14 +69,6 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           onClick={() => router.push("/dashboard/notifications")}
         >
           <Bell className="h-4 w-4 md:h-5 md:w-5" />
-          {unreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-4 w-4 md:h-5 md:w-5 flex items-center justify-center p-0 text-[10px] md:text-xs"
-            >
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </Badge>
-          )}
         </Button>
 
         <DropdownMenu>
@@ -94,12 +78,15 @@ export function TopNav({ onMenuClick }: TopNavProps) {
               className="flex items-center gap-2 h-auto py-1 px-2 md:px-3"
             >
               <Avatar className="h-7 w-7 md:h-8 md:w-8">
+                {user?.imageUrl && (
+                  <AvatarImage src={user.imageUrl} alt={displayName} />
+                )}
                 <AvatarFallback className="bg-blue-500 text-white text-xs md:text-sm">
-                  {user?.username?.charAt(0).toUpperCase() || "U"}
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden md:inline-block text-white text-sm">
-                {user?.username}
+                {displayName}
               </span>
             </Button>
           </DropdownMenuTrigger>
@@ -109,8 +96,8 @@ export function TopNav({ onMenuClick }: TopNavProps) {
           >
             <DropdownMenuLabel className="text-white">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium truncate">{user?.username}</p>
-                <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                <p className="text-sm font-medium truncate">{displayName}</p>
+                <p className="text-xs text-slate-400 truncate">{email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-slate-800" />

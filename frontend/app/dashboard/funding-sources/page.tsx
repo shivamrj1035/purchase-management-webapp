@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-import { useAuthStore } from "@/lib/store/authStore";
+import { useBorrowStore } from "@/lib/store/borrowStore";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,7 +27,6 @@ import { formatCurrency, formatDate } from "@/lib/utils/emiCalculator";
 import AddFundingSourceDialog from "@/components/funding/AddFundingSourceDialog";
 import EditFundingSourceDialog from "@/components/funding/EditFundingSourceDialog";
 import ViewFundingSourceDialog from "@/components/funding/ViewFundingSourceDialog";
-import { ConfigurationAlert } from "@/components/shared/ConfigurationAlert";
 
 export interface FundingSource {
   id: string;
@@ -120,76 +117,49 @@ function getNextEMIDetails(source: FundingSource) {
 }
 
 export default function FundingSourcesPage() {
-  const { user } = useAuthStore();
-  const [fundingSources, setFundingSources] = useState<FundingSource[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { borrows, loading, loadBorrows, deleteBorrow } = useBorrowStore();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [selectedSource, setSelectedSource] = useState<FundingSource | null>(
-    null
-  );
-
-  // Fetch funding sources
-  const fetchFundingSources = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      const sourcesRef = collection(db, "users", user.userId, "fundingSources");
-      const snapshot = await getDocs(sourcesRef);
-
-      const sources: FundingSource[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          sourceName: data.sourceName,
-          sourceType: data.sourceType,
-          principalAmount: data.principalAmount,
-          interestType: data.interestType,
-          interestRate: data.interestRate,
-          fixedInterestAmount: data.fixedInterestAmount,
-          tenureMonths: data.tenureMonths,
-          emiAmount: data.emiAmount,
-          fundReceivedDate: data.fundReceivedDate?.toDate() || new Date(),
-          emiStartDate: data.emiStartDate?.toDate() || new Date(),
-          status: data.status,
-          bankName: data.bankName,
-          lenderName: data.lenderName,
-          accountNumber: data.accountNumber,
-          notes: data.notes,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        };
-      });
-
-      setFundingSources(sources);
-    } catch (error) {
-      console.error("Error fetching funding sources:", error);
-      toast.error("Failed to load funding sources");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [selectedSource, setSelectedSource] = useState<FundingSource | null>(null);
 
   useEffect(() => {
-    fetchFundingSources();
-  }, [user]);
+    loadBorrows();
+  }, [loadBorrows]);
+
+  // Map borrows from sheet format to FundingSource format
+  const fundingSources: FundingSource[] = borrows.map((b) => ({
+    id: b.id,
+    sourceName: b.name,
+    sourceType: (b.type as FundingSource["sourceType"]) || "bank_loan",
+    principalAmount: b.principalAmount,
+    interestType: (b.interestType as "percentage" | "fixed_amount" | "none") || "percentage",
+    interestRate: b.interestRate,
+    fixedInterestAmount: 0,
+    tenureMonths: b.tenureMonths,
+    emiAmount: b.emiAmount,
+    fundReceivedDate: new Date(b.startDate || Date.now()),
+    emiStartDate: new Date(b.startDate || Date.now()),
+    status: (b.status as "active" | "closed" | "pending") || "active",
+    bankName: b.bankName,
+    lenderName: b.lenderName,
+    accountNumber: b.accountNumber,
+    notes: b.notes,
+    createdAt: new Date(b.createdAt || Date.now()),
+    updatedAt: new Date(b.updatedAt || Date.now()),
+  }));
+
+  const fetchFundingSources = () => loadBorrows();
 
   // Delete funding source
   const handleDelete = async (sourceId: string) => {
-    if (!user) return;
-
     if (!confirm("Are you sure you want to delete this funding source?")) {
       return;
     }
 
     try {
-      await deleteDoc(
-        doc(db, "users", user.userId, "fundingSources", sourceId)
-      );
+      await deleteBorrow(sourceId);
       toast.success("Funding source deleted successfully");
-      fetchFundingSources();
     } catch (error) {
       console.error("Error deleting funding source:", error);
       toast.error("Failed to delete funding source");
@@ -230,9 +200,6 @@ export default function FundingSourcesPage() {
 
   return (
     <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
-      {/* Configuration Alert */}
-      <ConfigurationAlert />
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>

@@ -1,37 +1,66 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuthStore } from "@/lib/store/authStore";
+import { useUser } from "@clerk/nextjs";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNav } from "@/components/layout/TopNav";
-import Cookies from "js-cookie";
+import { SpreadsheetOnboarding } from "@/components/onboarding/SpreadsheetOnboarding";
+import { useSpreadsheetStore } from "@/lib/store/spreadsheetStore";
+import { useAuthStore } from "@/lib/store/authStore";
+import { Loader2 } from "lucide-react";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isLoaded, isSignedIn, user: clerkUser } = useUser();
+  const { configured, loading: configLoading, loadConfig } = useSpreadsheetStore();
+  const { setClerkUser } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if auth token exists in cookie
-    const token = Cookies.get("auth-token");
-    if (token) {
-      setIsLoading(false);
-    } else if (!isAuthenticated) {
-      // Only redirect if both token and isAuthenticated are false
-      // This prevents redirect during Zustand rehydration
-      setIsLoading(false);
-    } else {
-      setIsLoading(false);
+    if (isLoaded && isSignedIn && clerkUser) {
+      loadConfig();
+      // Sync Clerk user to authStore for compatibility
+      setClerkUser({
+        id: clerkUser.id,
+        emailAddresses: clerkUser.emailAddresses.map(e => ({ emailAddress: e.emailAddress })),
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+      });
     }
-  }, [isAuthenticated]);
+  }, [isLoaded, isSignedIn, clerkUser, loadConfig, setClerkUser]);
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // Still loading auth state
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen bg-slate-950 items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // Not signed in - Clerk middleware will redirect, but just in case
+  if (!isSignedIn) {
     return null;
+  }
+
+  // Loading spreadsheet config
+  if (configLoading) {
+    return (
+      <div className="flex h-screen bg-slate-950 items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" />
+          <p className="text-slate-400 text-sm">Loading your configuration...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show onboarding if spreadsheet not configured
+  if (!configured) {
+    return <SpreadsheetOnboarding />;
   }
 
   return (

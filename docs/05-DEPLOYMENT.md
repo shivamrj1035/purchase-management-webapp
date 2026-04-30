@@ -40,7 +40,7 @@ Complete guide for deploying the Housing Management Platform to production.
 - [ ] HTTPS enforced
 - [ ] CORS properly configured
 - [ ] Rate limiting enabled
-- [ ] SQL injection prevention (N/A for Firestore)
+- [ ] SQL injection prevention (N/A for Google Sheets)
 - [ ] XSS protection enabled
 - [ ] CSRF tokens implemented
 - [ ] Security headers configured
@@ -113,12 +113,18 @@ node_modules
    Add these in Vercel Dashboard → Project Settings → Environment Variables:
 
    ```env
-   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_publishable_key
+   CLERK_SECRET_KEY=your_secret_key
+   NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+   NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+   NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+   NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+   GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email
+   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+"
+   GOOGLE_MASTER_SPREADSHEET_ID=your_spreadsheet_id
    NEXT_PUBLIC_API_URL=https://your-backend.onrender.com
    ```
 
@@ -147,7 +153,7 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ["storage.googleapis.com", "firebasestorage.googleapis.com"],
+    domains: ["storage.googleapis.com"],
   },
   // Enable compression
   compress: true,
@@ -223,7 +229,7 @@ uvicorn[standard]==0.24.0
 python-dotenv==1.0.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
-firebase-admin==6.3.0
+httpx==0.27.0
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
@@ -315,22 +321,7 @@ if __name__ == "__main__":
    ALLOWED_ORIGINS=https://your-frontend.vercel.app
    ```
 
-4. **Upload Firebase Credentials**
-
-   Option 1: Use Render Secret Files
-
-   - Go to Environment → Secret Files
-   - Add file: `firebase-adminsdk.json`
-   - Paste your Firebase service account JSON
-   - Update env: `FIREBASE_CREDENTIALS_PATH=/etc/secrets/firebase-adminsdk.json`
-
-   Option 2: Use Environment Variable
-
-   - Convert JSON to base64: `cat firebase-adminsdk.json | base64`
-   - Add env: `FIREBASE_CREDENTIALS_BASE64=<base64_string>`
-   - Update code to decode and use
-
-5. **Deploy**
+4. **Deploy**
    - Click "Create Web Service"
    - Wait for deployment
    - Your API will be at `https://housing-management-api.onrender.com`
@@ -347,80 +338,23 @@ if __name__ == "__main__":
 
 ---
 
-## Firebase Configuration
+## Google Sheets Configuration
 
-### Production Security Rules
+### 1. Create Service Account
+1. Go to Google Cloud Console
+2. Create a new Service Account
+3. Generate and download JSON key
 
-Update Firestore security rules:
+### 2. Configure Spreadsheet
+1. Create a new Google Spreadsheet
+2. Share it with the Service Account email (Editor role)
+3. Note the Spreadsheet ID from the URL
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    function isValidEmail(email) {
-      return email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
-    }
-
-    match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isAuthenticated() && isOwner(userId) && isValidEmail(request.resource.data.email);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-
-      match /fundingSources/{fundingId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /incomingPayments/{paymentId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /outgoingPayments/{expenseId} {
-        allow read, write: if isOwner(userId);
-      }
-
-      match /settings/{document=**} {
-        allow read, write: if isOwner(userId);
-      }
-    }
-  }
-}
-```
-
-### Create Indexes
-
-In Firebase Console → Firestore → Indexes:
-
-1. **Funding Sources by Status**
-
-   - Collection: `users/{userId}/fundingSources`
-   - Fields: `status` (Ascending), `fundingDate` (Descending)
-
-2. **Payments by Status and Date**
-
-   - Collection: `users/{userId}/incomingPayments`
-   - Fields: `status` (Ascending), `scheduleDate` (Ascending)
-
-3. **Outgoing Payments by Type**
-   - Collection: `users/{userId}/outgoingPayments`
-   - Fields: `paymentType` (Ascending), `paymentDate` (Descending)
-
-### Enable Authentication
-
-1. Go to Authentication → Sign-in method
-2. Enable **Email/Password**
-3. Add authorized domains:
-   - `your-domain.com`
-   - `your-frontend.vercel.app`
+### 3. Setup Clerk Webhooks
+1. Go to Clerk Dashboard -> Webhooks
+2. Add Endpoint: https://your-backend.onrender.com/api/webhooks/clerk
+3. Select events: user.created, user.updated, user.deleted
+4. Copy Signing Secret to backend environment
 
 ---
 
@@ -628,33 +562,11 @@ export function logError(error: Error, context?: any) {
 
 ## Backup & Recovery
 
-### Firestore Backups
+### Google Sheets Backups
 
 1. **Automated Backups**
-
-   ```bash
-   # Install Firebase CLI
-   npm install -g firebase-tools
-
-   # Login
-   firebase login
-
-   # Export data
-   firebase firestore:export gs://your-bucket/backup-$(date +%Y%m%d)
-   ```
-
-2. **Schedule Backups** (using Cloud Scheduler)
-   - Go to Google Cloud Console
-   - Create Cloud Scheduler job
-   - Schedule: Daily at 2 AM
-   - Target: Firestore export function
-
-### Database Recovery
-
-```bash
-# Restore from backup
-firebase firestore:import gs://your-bucket/backup-20240115
-```
+   - Google Sheets provides built-in version history
+   - Go to File -> Version history -> See version history
 
 ### Code Backups
 
@@ -744,11 +656,11 @@ git push origin main
 - 512 MB RAM
 - Sleeps after 15 min inactivity
 
-**Firebase Free Tier (Spark Plan):**
+**Google Sheets Free Tier:**
 
-- 1 GB storage
-- 10 GB/month data transfer
-- 50K reads/day, 20K writes/day
+- Free with Google Account
+- 300 read requests per minute per project
+- 300 write requests per minute per project
 
 ### Upgrade When Needed
 

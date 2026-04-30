@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-import { useAuthStore } from "@/lib/store/authStore";
+import { useBorrowStore } from "@/lib/store/borrowStore";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +35,7 @@ export default function AddFundingSourceDialog({
   onOpenChange,
   onSuccess,
 }: AddFundingSourceDialogProps) {
-  const { user } = useAuthStore();
+  const { addBorrow } = useBorrowStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     sourceName: "",
@@ -62,7 +60,6 @@ export default function AddFundingSourceDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
 
     try {
       setLoading(true);
@@ -120,28 +117,21 @@ export default function AddFundingSourceDialog({
         }
       }
 
-      // Create funding source
-      const sourcesRef = collection(db, "users", user.userId, "fundingSources");
-      await addDoc(sourcesRef, {
-        sourceName: formData.sourceName,
-        sourceType: formData.sourceType,
+      // Create funding source via API
+      await addBorrow({
+        name: formData.sourceName,
+        type: formData.sourceType,
         principalAmount: principal,
         interestType: formData.interestType,
         interestRate: rate,
-        fixedInterestAmount:
-          formData.interestType === "fixed_amount"
-            ? parseFloat(formData.fixedInterestAmount)
-            : 0,
         tenureMonths: tenure,
         emiAmount: emiAmount,
-        fundReceivedDate: Timestamp.fromDate(new Date(formData.fundReceivedDate)),
-        emiStartDate: Timestamp.fromDate(new Date(formData.emiStartDate)),
+        startDate: formData.emiStartDate,
         status: formData.status,
-        bankName: formData.bankName || null,
-        accountNumber: formData.accountNumber || null,
-        notes: formData.notes || null,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        bankName: formData.bankName || '',
+        lenderName: '',
+        accountNumber: formData.accountNumber || '',
+        notes: formData.notes || '',
       });
 
       toast.success("Funding source added successfully");

@@ -18,11 +18,11 @@ services:
         value: smtp.gmail.com
       - key: SMTP_PORT
         value: 587
-      - key: DATABASE_TYPE
-        value: firestore
-      - key: JWT_SECRET_KEY
+      - key: CLERK_JWKS_URL
         sync: false
-      - key: FIREBASE_ADMIN_SDK_JSON
+      - key: CLERK_ISSUER
+        sync: false
+      - key: CLERK_AUDIENCE
         sync: false
       - key: SMTP_USERNAME
         sync: false

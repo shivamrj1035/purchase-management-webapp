@@ -1,19 +1,5 @@
 import { create } from "zustand";
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  addDoc,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  Timestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-import {
   Notification,
   NotificationConfig,
   NotificationTrigger,
@@ -57,28 +43,21 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
   loadNotifications: async (userId: string) => {
     try {
       set({ loading: true });
-      const notificationsRef = collection(db, "users", userId, "notifications");
-      const q = query(notificationsRef, orderBy("createdAt", "desc"));
-      const snapshot = await getDocs(q);
+      const res = await fetch('/api/sheets/notifications');
+      const data = await res.json();
 
-      const notifications: Notification[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          userId: data.userId,
-          type: data.type,
-          title: data.title,
-          message: data.message,
-          status: data.status,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          readAt: data.readAt?.toDate(),
-          metadata: data.metadata,
-        };
-      });
+      if (data.notifications) {
+        const notifications: Notification[] = data.notifications.map((n: any) => ({
+          ...n,
+          createdAt: new Date(n.createdAt),
+          readAt: n.readAt ? new Date(n.readAt) : undefined,
+          metadata: JSON.parse(n.metadata || '{}'),
+          userId: userId, // Backend doesn't return userId as it's implicit from auth
+        }));
 
-      const unreadCount = notifications.filter((n) => n.status === "unread").length;
-
-      set({ notifications, unreadCount });
+        const unreadCount = notifications.filter((n) => n.status === "unread").length;
+        set({ notifications, unreadCount });
+      }
     } catch (error) {
       console.error("Error loading notifications:", error);
       set({ notifications: [], unreadCount: 0 });
@@ -89,19 +68,22 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
 
   markAsRead: async (userId: string, notificationId: string) => {
     try {
-      const notificationRef = doc(db, "users", userId, "notifications", notificationId);
-      await updateDoc(notificationRef, {
-        status: "read",
-        readAt: Timestamp.now(),
+      const n = get().notifications.find(notif => notif.id === notificationId);
+      if (!n) return;
+
+      const updated = { ...n, status: "read" as NotificationStatus, readAt: new Date().toISOString() };
+      await fetch('/api/sheets/notifications', {
+        method: 'PUT',
+        body: JSON.stringify(updated),
       });
 
       // Update local state
-      const notifications = get().notifications.map((n) =>
-        n.id === notificationId
-          ? { ...n, status: "read" as NotificationStatus, readAt: new Date() }
-          : n
+      const notifications = get().notifications.map((notif) =>
+        notif.id === notificationId
+          ? { ...notif, status: "read" as NotificationStatus, readAt: new Date() }
+          : notif
       );
-      const unreadCount = notifications.filter((n) => n.status === "unread").length;
+      const unreadCount = notifications.filter((notif) => notif.status === "unread").length;
       set({ notifications, unreadCount });
     } catch (error) {
       console.error("Error marking notification as read:", error);
@@ -112,12 +94,13 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
   markAllAsRead: async (userId: string) => {
     try {
       const unreadNotifications = get().notifications.filter((n) => n.status === "unread");
+      const now = new Date();
 
-      for (const notification of unreadNotifications) {
-        const notificationRef = doc(db, "users", userId, "notifications", notification.id);
-        await updateDoc(notificationRef, {
-          status: "read",
-          readAt: Timestamp.now(),
+      for (const n of unreadNotifications) {
+        const updated = { ...n, status: "read" as NotificationStatus, readAt: now.toISOString() };
+        await fetch('/api/sheets/notifications', {
+          method: 'PUT',
+          body: JSON.stringify(updated),
         });
       }
 
@@ -125,7 +108,7 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
       const notifications = get().notifications.map((n) => ({
         ...n,
         status: "read" as NotificationStatus,
-        readAt: n.status === "unread" ? new Date() : n.readAt,
+        readAt: n.status === "unread" ? now : n.readAt,
       }));
       set({ notifications, unreadCount: 0 });
     } catch (error) {
@@ -136,9 +119,8 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
 
   deleteNotification: async (userId: string, notificationId: string) => {
     try {
-      const notificationRef = doc(db, "users", userId, "notifications", notificationId);
-      await updateDoc(notificationRef, {
-        status: "archived",
+      await fetch(`/api/sheets/notifications?id=${notificationId}`, {
+        method: 'DELETE',
       });
 
       // Update local state
@@ -153,10 +135,12 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
 
   addNotification: async (userId: string, notification: Omit<Notification, "id">) => {
     try {
-      const notificationsRef = collection(db, "users", userId, "notifications");
-      await addDoc(notificationsRef, {
-        ...notification,
-        createdAt: Timestamp.fromDate(notification.createdAt),
+      await fetch('/api/sheets/notifications', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...notification,
+          createdAt: notification.createdAt.toISOString(),
+        }),
       });
 
       // Reload notifications
@@ -170,19 +154,15 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
   loadConfig: async (userId: string) => {
     try {
       set({ loading: true });
-      const configRef = doc(db, "users", userId, "config", "notifications");
-      const configSnap = await getDoc(configRef);
+      const res = await fetch('/api/sheets/details');
+      const data = await res.json();
 
-      if (configSnap.exists()) {
-        const data = configSnap.data();
+      if (data.details && data.details.notification_config) {
+        const configData = JSON.parse(data.details.notification_config);
         const config: NotificationConfig = {
-          userId: data.userId,
-          primaryEmail: data.primaryEmail,
-          ccEmails: data.ccEmails || [],
-          enableAutoReminders: data.enableAutoReminders ?? true,
-          reminderDaysBefore: data.reminderDaysBefore ?? 7,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
+          ...configData,
+          createdAt: new Date(configData.createdAt),
+          updatedAt: new Date(configData.updatedAt),
         };
         set({ config });
       } else {
@@ -198,8 +178,10 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
 
   saveConfig: async (userId: string, configUpdates: Partial<NotificationConfig>) => {
     try {
-      const configRef = doc(db, "users", userId, "config", "notifications");
       const existingConfig = get().config;
+      const res = await fetch('/api/sheets/details');
+      const data = await res.json();
+      const details = data.details || {};
 
       const newConfig: NotificationConfig = {
         userId,
@@ -211,10 +193,11 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
         updatedAt: new Date(),
       };
 
-      await setDoc(configRef, {
-        ...newConfig,
-        createdAt: Timestamp.fromDate(newConfig.createdAt),
-        updatedAt: Timestamp.now(),
+      details.notification_config = JSON.stringify(newConfig);
+
+      await fetch('/api/sheets/details', {
+        method: 'PUT',
+        body: JSON.stringify({ details }),
       });
 
       set({ config: newConfig });
@@ -226,26 +209,22 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
 
   loadTriggers: async (userId: string) => {
     try {
-      const triggersRef = collection(db, "users", userId, "notificationTriggers");
-      const q = query(triggersRef, orderBy("createdAt", "desc"));
-      const snapshot = await getDocs(q);
+      const res = await fetch('/api/sheets/triggers');
+      const data = await res.json();
 
-      const triggers: NotificationTrigger[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          userId: data.userId,
-          emiPaymentIds: data.emiPaymentIds || [],
-          scheduledFor: data.scheduledFor?.toDate() || new Date(),
-          status: data.status,
-          ccEmails: data.ccEmails || [],
-          createdAt: data.createdAt?.toDate() || new Date(),
-          sentAt: data.sentAt?.toDate(),
-          errorMessage: data.errorMessage,
-        };
-      });
+      if (data.triggers) {
+        const triggers: NotificationTrigger[] = data.triggers.map((t: any) => ({
+          ...t,
+          emiPaymentIds: t.emiPaymentIds ? t.emiPaymentIds.split(',') : [],
+          ccEmails: t.ccEmails ? t.ccEmails.split(',') : [],
+          scheduledFor: new Date(t.scheduledFor),
+          createdAt: new Date(t.createdAt),
+          sentAt: t.sentAt ? new Date(t.sentAt) : undefined,
+          userId: userId,
+        }));
 
-      set({ triggers });
+        set({ triggers });
+      }
     } catch (error) {
       console.error("Error loading notification triggers:", error);
       set({ triggers: [] });
@@ -254,13 +233,13 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
 
   createTrigger: async (userId: string, trigger: Omit<NotificationTrigger, "id" | "createdAt" | "userId">) => {
     try {
-      const triggersRef = collection(db, "users", userId, "notificationTriggers");
-      await addDoc(triggersRef, {
-        ...trigger,
-        userId,
-        createdAt: Timestamp.now(),
-        scheduledFor: Timestamp.fromDate(trigger.scheduledFor),
-        sentAt: trigger.sentAt ? Timestamp.fromDate(trigger.sentAt) : null,
+      await fetch('/api/sheets/triggers', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...trigger,
+          scheduledFor: trigger.scheduledFor.toISOString(),
+          sentAt: trigger.sentAt?.toISOString(),
+        }),
       });
 
       // Reload triggers
@@ -273,17 +252,20 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
 
   updateTrigger: async (userId: string, triggerId: string, updates: Partial<NotificationTrigger>) => {
     try {
-      const triggerRef = doc(db, "users", userId, "notificationTriggers", triggerId);
-      const updateData: any = { ...updates };
+      const t = get().triggers.find(trig => trig.id === triggerId);
+      if (!t) return;
 
-      if (updates.scheduledFor) {
-        updateData.scheduledFor = Timestamp.fromDate(updates.scheduledFor);
-      }
-      if (updates.sentAt) {
-        updateData.sentAt = Timestamp.fromDate(updates.sentAt);
-      }
+      const updated = {
+        ...t,
+        ...updates,
+        scheduledFor: (updates.scheduledFor || t.scheduledFor).toISOString(),
+        sentAt: updates.sentAt ? updates.sentAt.toISOString() : (t.sentAt ? t.sentAt.toISOString() : undefined),
+      };
 
-      await updateDoc(triggerRef, updateData);
+      await fetch('/api/sheets/triggers', {
+        method: 'PUT',
+        body: JSON.stringify(updated),
+      });
 
       // Reload triggers
       await get().loadTriggers(userId);
@@ -295,3 +277,4 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
 
   clearNotifications: () => set({ notifications: [], config: null, triggers: [], unreadCount: 0 }),
 }));
+

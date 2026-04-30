@@ -36,7 +36,7 @@ interface MarkAsPaidDialogProps {
   onConfirm: (paymentMethod: string, notes: string) => void;
 }
 
-export default function MarkAsPaidDialog({
+export function MarkAsPaidDialog({
   open,
   onOpenChange,
   payment,

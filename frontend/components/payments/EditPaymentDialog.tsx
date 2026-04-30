@@ -1,20 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { doc, updateDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { useEMIStore } from "@/lib/store/emiStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -23,32 +21,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Payment } from "@/lib/types/payment";
+import { EMIRow } from "@/lib/google-sheets/schema";
 import { numberToIndianWords } from "@/lib/utils/numberToWords";
 
 interface EditPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  payment: Payment;
-  fundingSources: any[];
+  payment: EMIRow;
   onSuccess: () => void;
 }
 
-export default function EditPaymentDialog({
+export function EditPaymentDialog({
   open,
   onOpenChange,
   payment,
-  fundingSources,
   onSuccess,
 }: EditPaymentDialogProps) {
   const { user } = useAuthStore();
+  const { updateEMI } = useEMIStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fundingSourceId: payment.fundingSourceId,
-    dueDate: payment.dueDate.toISOString().split("T")[0],
     amount: payment.amount.toString(),
-    status: payment.status,
-    paymentDate: payment.paymentDate.toISOString().split("T")[0],
+    status: payment.status as "paid" | "pending" | "overdue",
+    paymentDate: payment.paymentDate
+      ? new Date(payment.paymentDate).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0],
     paymentMethod: payment.paymentMethod || "",
     transactionId: payment.transactionId || "",
     notes: payment.notes || "",
@@ -57,11 +54,11 @@ export default function EditPaymentDialog({
   // Update form data when payment prop changes
   useEffect(() => {
     setFormData({
-      fundingSourceId: payment.fundingSourceId,
-      dueDate: payment.dueDate.toISOString().split("T")[0],
       amount: payment.amount.toString(),
-      status: payment.status,
-      paymentDate: payment.paymentDate.toISOString().split("T")[0],
+      status: payment.status as "paid" | "pending" | "overdue",
+      paymentDate: payment.paymentDate
+        ? new Date(payment.paymentDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
       paymentMethod: payment.paymentMethod || "",
       transactionId: payment.transactionId || "",
       notes: payment.notes || "",
@@ -71,37 +68,26 @@ export default function EditPaymentDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const userId = user?.userId || "dev-user";
-
     try {
       setLoading(true);
 
       const amount = parseFloat(formData.amount);
-      if (amount <= 0) {
-        toast.error("Amount must be greater than 0");
+      if (isNaN(amount)) {
+        toast.error("Please enter a valid amount");
         return;
       }
 
-      const selectedSource = fundingSources.find(
-        (s) => s.id === formData.fundingSourceId
-      );
-
-      const paymentRef = doc(db, "users", userId, "emiPayments", payment.id);
-      await updateDoc(paymentRef, {
-        fundingSourceId: formData.fundingSourceId,
-        fundingSourceName:
-          selectedSource?.sourceName || payment.fundingSourceName,
-        dueDate: Timestamp.fromDate(new Date(formData.dueDate)),
+      await updateEMI({
+        ...payment,
         amount: amount,
         status: formData.status,
         paymentDate:
           formData.status === "paid"
-            ? Timestamp.fromDate(new Date(formData.paymentDate))
-            : null,
-        paymentMethod: formData.paymentMethod || null,
-        transactionId: formData.transactionId || null,
-        notes: formData.notes || null,
-        updatedAt: Timestamp.now(),
+            ? new Date(formData.paymentDate).toISOString()
+            : "",
+        paymentMethod: formData.paymentMethod || "",
+        transactionId: formData.transactionId || "",
+        notes: formData.notes || "",
       });
 
       toast.success("Payment updated successfully");
@@ -115,84 +101,62 @@ export default function EditPaymentDialog({
     }
   };
 
+  const amountInWords = parseFloat(formData.amount)
+    ? numberToIndianWords(parseFloat(formData.amount))
+    : "";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Edit Payment</DialogTitle>
-          <DialogDescription className="text-slate-400">
-            Update payment details
-          </DialogDescription>
+          <DialogTitle className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+            Edit EMI Payment
+          </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="fundingSourceId">Funding Source</Label>
-            <Select
-              value={formData.fundingSourceId}
-              onValueChange={(value) =>
-                setFormData({ ...formData, fundingSourceId: value })
-              }
-            >
-              <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                <SelectValue placeholder="Select funding source">
-                  {fundingSources.find((s) => s.id === formData.fundingSourceId)
-                    ?.sourceName || "Select funding source"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                {fundingSources
-                  .filter(
-                    (s) =>
-                      s.sourceType === "bank_loan" ||
-                      s.sourceType === "personal_loan"
-                  )
-                  .map((source) => (
-                    <SelectItem key={source.id} value={source.id}>
-                      {source.sourceName}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount (₹)</Label>
+              <Label>Borrow Source</Label>
+              <Input
+                value={payment.borrowName}
+                disabled
+                className="bg-slate-800/50 border-slate-700 text-slate-400"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Due Date</Label>
+              <Input
+                value={new Date(payment.dueDate).toLocaleDateString()}
+                disabled
+                className="bg-slate-800/50 border-slate-700 text-slate-400"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="amount">Payment Amount</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-2.5 text-slate-400">₹</span>
               <Input
                 id="amount"
                 type="number"
-                step="0.01"
                 value={formData.amount}
                 onChange={(e) =>
                   setFormData({ ...formData, amount: e.target.value })
                 }
-                className="bg-slate-800 border-slate-700 text-white"
+                className="pl-7 bg-slate-800 border-slate-700 focus:border-blue-500 text-white"
+                placeholder="0.00"
                 required
               />
-              {formData.amount && parseFloat(formData.amount) > 0 && (
-                <p className="text-xs text-emerald-400 mt-1">
-                  {numberToIndianWords(formData.amount)}
-                </p>
-              )}
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, dueDate: e.target.value })
-                }
-                className="bg-slate-800 border-slate-700 text-white"
-              />
-            </div>
+            {amountInWords && (
+              <p className="text-xs text-blue-400/80 italic">{amountInWords} Rupees Only</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status">Payment Status</Label>
+            <Label>Status</Label>
             <Select
               value={formData.status}
               onValueChange={(value: any) =>
@@ -200,18 +164,18 @@ export default function EditPaymentDialog({
               }
             >
               <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                <SelectValue />
+                <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {formData.status === "paid" && (
-            <>
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="paymentDate">Payment Date</Label>
@@ -223,27 +187,32 @@ export default function EditPaymentDialog({
                       setFormData({ ...formData, paymentDate: e.target.value })
                     }
                     className="bg-slate-800 border-slate-700 text-white"
+                    required
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <Input
-                    id="paymentMethod"
+                  <Label>Payment Method</Label>
+                  <Select
                     value={formData.paymentMethod}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        paymentMethod: e.target.value,
-                      })
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, paymentMethod: value })
                     }
-                    className="bg-slate-800 border-slate-700 text-white"
-                  />
+                  >
+                    <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                      <SelectValue placeholder="Method" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="cheque">Cheque</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="transactionId">Transaction ID</Label>
+                <Label htmlFor="transactionId">Transaction ID (Optional)</Label>
                 <Input
                   id="transactionId"
                   value={formData.transactionId}
@@ -251,41 +220,40 @@ export default function EditPaymentDialog({
                     setFormData({ ...formData, transactionId: e.target.value })
                   }
                   className="bg-slate-800 border-slate-700 text-white"
+                  placeholder="Reference number"
                 />
               </div>
-            </>
+            </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
+            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Input
               id="notes"
               value={formData.notes}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="bg-slate-800 border-slate-700 text-white"
-              rows={3}
+              placeholder="Add any additional details"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="text-slate-400 hover:text-white hover:bg-slate-800"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="bg-blue-500 hover:bg-blue-600"
+              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white min-w-[120px]"
             >
               {loading ? "Updating..." : "Update Payment"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

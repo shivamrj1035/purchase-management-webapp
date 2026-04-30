@@ -26,7 +26,7 @@ Write-Host "📍 Checking current branch..."
 $currentBranch = git branch --show-current
 if ($currentBranch -ne "production") {
     Print-Warning "You are on branch '$currentBranch', not 'production'"
-    $switch = Read-Host "Switch to production branch? (y/n)"
+    $switch = Read-Host "Switch to production branch(y/n)"
     if ($switch -eq "y" -or $switch -eq "Y") {
         git checkout production
         Print-Success "Switched to production branch"
@@ -51,7 +51,7 @@ $status = git status -s
 if ($status) {
     Print-Warning "You have uncommitted changes:"
     git status -s
-    $commit = Read-Host "Commit changes? (y/n)"
+    $commit = Read-Host "Commit changes(y/n)"
     if ($commit -eq "y" -or $commit -eq "Y") {
         $commitMsg = Read-Host "Enter commit message"
         git add .
@@ -124,7 +124,7 @@ Set-Location ..
 Write-Host ""
 Write-Host "🚢 Ready to deploy to production"
 Write-Host ""
-$deploy = Read-Host "Push to production branch? (y/n)"
+$deploy = Read-Host "Push to production branch(y/n)"
 if ($deploy -eq "y" -or $deploy -eq "Y") {
     git push origin production
     Print-Success "Pushed to production branch"

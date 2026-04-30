@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 import { useAuthStore } from "@/lib/store/authStore";
 import { usePropertyStore } from "@/lib/store/propertyStore";
+import { useBorrowStore } from "@/lib/store/borrowStore";
+import { usePaymentStore } from "@/lib/store/paymentStore";
 import {
   Card,
   CardContent,
@@ -34,8 +34,10 @@ import { ConfigurationAlert } from "@/components/shared/ConfigurationAlert";
 
 export default function AnalyticsPage() {
   const { user } = useAuthStore();
-  const { propertyDetails, loadPropertyDetails, getTotalCost } =
-    usePropertyStore();
+  const { propertyDetails, loadPropertyDetails, getTotalCost } = usePropertyStore();
+  const { borrows, loadBorrows, loading: borrowsLoading } = useBorrowStore();
+  const { payments, loadPayments, loading: paymentsLoading } = usePaymentStore();
+
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState({
     totalFunding: 0,
@@ -51,105 +53,94 @@ export default function AnalyticsPage() {
     contributionCount: 0,
   });
 
-  // Load property details on mount
+  // Load data on mount
   useEffect(() => {
-    if (user?.userId) {
-      loadPropertyDetails(user.userId);
-    }
-  }, [user?.userId, loadPropertyDetails]);
-
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      const userId = user?.userId || "dev-user";
-
-      try {
-        setLoading(true);
-
-        // Fetch funding sources
-        const fundingRef = collection(db, "users", userId, "fundingSources");
-        const fundingSnapshot = await getDocs(fundingRef);
-        let totalFunding = 0;
-        let totalEMI = 0;
-        let totalInterest = 0;
-        let loanCount = 0;
-        let contributionCount = 0;
-        const fundingByType: Record<string, number> = {};
-
-        fundingSnapshot.docs.forEach((doc) => {
-          const data = doc.data();
-          const principal = data.principalAmount || 0;
-          totalFunding += principal;
-
-          // Count loans vs contributions
-          if (
-            data.sourceType === "bank_loan" ||
-            data.sourceType === "personal_loan"
-          ) {
-            loanCount++;
-            if (data.status === "active") {
-              totalEMI += data.emiAmount || 0;
-            }
-            // Calculate interest
-            if (data.interestRate > 0) {
-              const schedule = generateAmortizationSchedule(
-                principal,
-                data.interestRate,
-                data.tenureMonths || 0,
-                data.startDate?.toDate() || new Date()
-              );
-              totalInterest += schedule.totalInterest;
-            }
-          } else {
-            contributionCount++;
-          }
-
-          fundingByType[data.sourceType] =
-            (fundingByType[data.sourceType] || 0) + principal;
-        });
-
-        // Fetch outgoing payments
-        const outgoingRef = collection(db, "users", userId, "outgoingPayments");
-        const outgoingSnapshot = await getDocs(outgoingRef);
-        let totalOutgoing = 0;
-        let totalPaid = 0;
-        let totalPending = 0;
-        const expensesByCategory: Record<string, number> = {};
-
-        outgoingSnapshot.docs.forEach((doc) => {
-          const data = doc.data();
-          const amount = data.amount || 0;
-          totalOutgoing += amount;
-          if (data.status === "paid") {
-            totalPaid += amount;
-          } else {
-            totalPending += amount;
-          }
-          expensesByCategory[data.category] =
-            (expensesByCategory[data.category] || 0) + amount;
-        });
-
-        setAnalytics({
-          totalFunding,
-          totalEMI,
-          totalInterest,
-          totalOutgoing,
-          totalPaid,
-          totalPending,
-          netPosition: totalFunding - totalOutgoing,
-          fundingByType,
-          expensesByCategory,
-          loanCount,
-          contributionCount,
-        });
-      } catch (error) {
-        console.error("Error fetching analytics:", error);
-      } finally {
-        setLoading(false);
+    const loadAllData = async () => {
+      setLoading(true);
+      if (user?.userId) {
+        await Promise.all([
+          loadPropertyDetails(user.userId),
+          loadBorrows(),
+          loadPayments(),
+        ]);
       }
+      setLoading(false);
     };
+    loadAllData();
+  }, [user?.userId, loadPropertyDetails, loadBorrows, loadPayments]);
 
-    fetchAnalytics();
-  }, [user]);
+  useEffect(() => {
+    if (!borrows.length && !payments.length) return;
+
+    let totalFunding = 0;
+    let totalEMI = 0;
+    let totalInterest = 0;
+    let loanCount = 0;
+    let contributionCount = 0;
+    const fundingByType: Record<string, number> = {};
+
+    borrows.forEach((borrow) => {
+      const principal = borrow.principalAmount || 0;
+      totalFunding += principal;
+
+      // Count loans vs contributions
+      if (
+        borrow.type === "bank_loan" ||
+        borrow.type === "personal_loan"
+      ) {
+        loanCount++;
+        if (borrow.status === "active") {
+          totalEMI += borrow.emiAmount || 0;
+        }
+        // Calculate interest
+        if (borrow.interestRate > 0) {
+          const schedule = generateAmortizationSchedule(
+            principal,
+            borrow.interestRate,
+            borrow.tenureMonths || 0,
+            borrow.startDate ? new Date(borrow.startDate) : new Date()
+          );
+          totalInterest += schedule.totalInterest;
+        }
+      } else {
+        contributionCount++;
+      }
+
+      fundingByType[borrow.type] =
+        (fundingByType[borrow.type] || 0) + principal;
+    });
+
+    let totalOutgoing = 0;
+    let totalPaid = 0;
+    let totalPending = 0;
+    const expensesByCategory: Record<string, number> = {};
+
+    payments.forEach((payment) => {
+      const amount = payment.amount || 0;
+      totalOutgoing += amount;
+      if (payment.status === "paid") {
+        totalPaid += amount;
+      } else {
+        totalPending += amount;
+      }
+      expensesByCategory[payment.category] =
+        (expensesByCategory[payment.category] || 0) + amount;
+    });
+
+    setAnalytics({
+      totalFunding,
+      totalEMI,
+      totalInterest,
+      totalOutgoing,
+      totalPaid,
+      totalPending,
+      netPosition: totalFunding - totalOutgoing,
+      fundingByType,
+      expensesByCategory,
+      loanCount,
+      contributionCount,
+    });
+  }, [borrows, payments]);
 
   // Calculate derived metrics
   const totalPropertyCost = getTotalCost();

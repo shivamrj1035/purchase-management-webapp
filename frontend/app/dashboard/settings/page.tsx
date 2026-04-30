@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 import {
   Card,
   CardContent,
@@ -14,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/lib/store/authStore";
-import { Settings as SettingsIcon, User, Bell, Database } from "lucide-react";
+import { Settings as SettingsIcon, User, Bell, Database, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DeleteAccountDialog } from "@/components/settings/DeleteAccountDialog";
 
@@ -26,17 +24,64 @@ export default function SettingsPage() {
     phoneNumber: user?.phoneNumber || "",
     homeAddress: user?.homeAddress || "",
   });
+  const [loading, setLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Load additional profile info from Details sheet
+  useEffect(() => {
+    const fetchProfileDetails = async () => {
+      try {
+        const res = await fetch("/api/sheets/details");
+        if (res.ok) {
+          const data = await res.json();
+          const details = data.details || {};
+          const newProfileData = {
+            ...profileData,
+            phoneNumber: details.phoneNumber || profileData.phoneNumber,
+            homeAddress: details.homeAddress || profileData.homeAddress,
+            username: details.username || profileData.username,
+          };
+          setProfileData(newProfileData);
+          updateUser(newProfileData);
+        }
+      } catch (error) {
+        console.error("Error fetching profile details:", error);
+      }
+    };
+
+    if (user?.userId) {
+      fetchProfileDetails();
+    }
+  }, [user?.userId]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
+      // Save to Google Sheets Details
+      const res = await fetch("/api/sheets/details", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          details: {
+            phoneNumber: profileData.phoneNumber,
+            homeAddress: profileData.homeAddress,
+            username: profileData.username,
+          },
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save to backend");
+
+      // Update local store
       updateUser(profileData);
       toast.success("Profile updated successfully");
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -123,8 +168,19 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex justify-end pt-4">
-              <Button type="submit" className="bg-blue-500 hover:bg-blue-600">
-                Save Changes
+              <Button 
+                type="submit" 
+                className="bg-blue-500 hover:bg-blue-600"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
               </Button>
             </div>
           </form>

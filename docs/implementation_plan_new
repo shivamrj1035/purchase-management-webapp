@@ -1,0 +1,359 @@
+# Purchase Management Webapp — Clerk Auth + Google Sheets Overhaul
+
+## Background & Problem
+
+The current app uses **Firebase Auth + Firestore** for authentication and data storage. Both are partially broken/non-functional. The user wants to:
+
+1. **Replace Firebase Auth → Clerk** for robust, modern authentication
+2. **Replace Firestore → Google Sheets** as the primary data store (each user brings their own spreadsheet)
+3. **Keep minimal app-level metadata** (user's spreadsheet URL, onboarding status) in a lightweight store
+4. Build a **trust model**: users own their data in their own Google Sheet, the app's service account just reads/writes there
+
+---
+
+## Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Frontend (Next.js 15)"
+        A[Landing Page] --> B[Clerk Auth]
+        B --> C[Spreadsheet Onboarding]
+        C --> D[Dashboard]
+        D --> E[Borrows / Funding]
+        D --> F[EMI Tracking]
+        D --> G[Payments]
+        D --> H[Analytics]
+    end
+
+    subgraph "Next.js API Routes"
+        I[/api/sheets/validate]
+        J[/api/sheets/borrows]
+        K[/api/sheets/emis]
+        L[/api/sheets/details]
+        M[/api/user/config]
+    end
+
+    subgraph "External"
+        N[Clerk Auth Service]
+        O[Google Sheets API]
+        P[User's Google Spreadsheet]
+    end
+
+    B --> N
+    C --> I --> O --> P
+    E --> J --> O --> P
+    F --> K --> O --> P
+    G --> L --> O --> P
+    D --> M
+```
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Clerk Keys Required**: You'll need to create a Clerk application at [clerk.com](https://clerk.com) and provide:
+> - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+> - `CLERK_SECRET_KEY`
+>
+> Do you already have a Clerk account/app, or should I guide you through creating one?
+
+> [!IMPORTANT]
+> **Backend Simplification**: Since all data lives in Google Sheets (user's spreadsheet) and auth is handled by Clerk (frontend-first), the **Python/FastAPI backend becomes unnecessary**. All API logic can move to **Next.js API Routes** (`/app/api/...`). This eliminates the need to deploy/maintain a separate backend server.
+>
+> Are you okay with removing the Python backend entirely?
+
+> [!WARNING]
+> **Service Account Key Security**: The `service-account-key.json` is currently at the project root and committed to Git. We'll move it to an environment variable to avoid accidental exposure. The private key will be stored as `GOOGLE_SERVICE_ACCOUNT_KEY` env var (JSON string).
+
+---
+
+## Open Questions
+
+1. **User metadata storage**: Since we're eliminating Firestore, where should we store the minimal user config (spreadsheet URL, onboarding status)?
+   - **Option A (Recommended)**: Store it in a **master Google Sheet** that the service account owns (one row per user — `userId`, `spreadsheetUrl`, `onboardedAt`)
+   - **Option B**: Use Clerk's user metadata (limited to ~4KB, but sufficient for URL + boolean)
+   - **Option C**: A tiny SQLite/JSON file on the server (not scalable for deployment)
+   
+   > I recommend **Option A** — a "master config" sheet owned by the service account, keeping everything in the Google ecosystem.
+
+2. **Sheet structure**: I plan the following sheets inside each user's spreadsheet:
+   
+   | Sheet Name | Purpose | Columns |
+   |---|---|---|
+   | **Borrows** | Funding sources / loans | ID, Name, Type, PrincipalAmount, InterestRate, InterestType, TenureMonths, EMIAmount, StartDate, Status, BankName, AccountNo, Notes, CreatedAt |
+   | **EMIs** | EMI payment records | ID, BorrowID, BorrowName, MonthNo, DueDate, PaymentDate, Amount, Principal, Interest, Balance, Status, PaymentMethod, TxnID, Notes |
+   | **Payments** | Outgoing payments (builder, legal, etc.) | ID, Category, Description, Amount, PaymentDate, Status, Recipient, PaymentMethod, ReceiptNo, Notes, CreatedAt |
+   | **Details** | Property configuration | Key, Value (key-value pairs for purchase price, registration fees, stamp duty, etc.) |
+   
+   Does this schema work for your needs, or do you want to add/change any columns?
+
+3. **Existing data**: Do you have any existing data in Firestore that needs to be migrated, or is this a fresh start?
+
+---
+
+## Proposed Changes
+
+### Phase 1: Remove Firebase, Install Clerk + Google Sheets Dependencies
+
+#### [MODIFY] [package.json](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/package.json)
+- Remove: `firebase`, `js-cookie`
+- Add: `@clerk/nextjs`, `googleapis` (for Google Sheets API)
+
+#### [DELETE] [lib/firebase/config.ts](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/lib/firebase/config.ts)
+- Remove Firebase initialization entirely
+
+---
+
+### Phase 2: Clerk Authentication Setup
+
+#### [MODIFY] [layout.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/app/layout.tsx)
+- Wrap app with `<ClerkProvider>`
+- Remove Toaster temporarily if needed, re-add after
+
+#### [MODIFY] [middleware.ts](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/middleware.ts)
+- Replace cookie-based auth check with `clerkMiddleware()` from `@clerk/nextjs/server`
+- Define public routes: `/`, `/sign-in`, `/sign-up`
+- Protect all `/dashboard/*` routes
+
+#### [DELETE] [(auth)/login/page.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/app/(auth)/login/page.tsx)
+#### [DELETE] [(auth)/register/page.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/app/(auth)/register/page.tsx)
+#### [DELETE] [(auth)/forgot-password/](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/app/(auth)/forgot-password)
+#### [DELETE] [(auth)/layout.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/app/(auth)/layout.tsx)
+- Clerk provides its own auth UI — no custom login/register pages needed
+
+#### [NEW] `app/sign-in/[[...sign-in]]/page.tsx`
+- Clerk's `<SignIn>` component with dark theme styling
+
+#### [NEW] `app/sign-up/[[...sign-up]]/page.tsx`
+- Clerk's `<SignUp>` component with dark theme styling
+
+#### [MODIFY] [authStore.ts](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/lib/store/authStore.ts)
+- Simplify: Remove Firebase-specific logic, cookies
+- Use Clerk's `useUser()` hook instead — the store becomes a thin wrapper or gets removed
+
+#### [MODIFY] [lib/types/auth.ts](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/lib/types/auth.ts)
+- Update User type to match Clerk's user model
+
+---
+
+### Phase 3: Google Sheets Service Layer (Next.js API Routes)
+
+#### [NEW] `lib/google-sheets/client.ts`
+- Initialize Google Sheets API client using service account credentials from env var
+- Export authenticated `sheets` client instance
+- Helper functions: `getSheetData()`, `appendRow()`, `updateRow()`, `deleteRow()`, `findRow()`
+
+#### [NEW] `lib/google-sheets/schema.ts`
+- Define sheet names, column mappings, header rows
+- Type-safe sheet operations with validation
+
+#### [NEW] `app/api/sheets/validate/route.ts`
+- POST: Accept spreadsheet URL, validate access, check if sheets exist
+- Create required sheets (Borrows, EMIs, Payments, Details) with headers if missing
+- Return success/failure status
+
+#### [NEW] `app/api/sheets/borrows/route.ts`
+- GET: Fetch all borrows from user's sheet
+- POST: Add new borrow entry
+- PUT: Update existing borrow
+- DELETE: Delete borrow by ID
+
+#### [NEW] `app/api/sheets/emis/route.ts`
+- GET: Fetch all EMI records
+- POST: Record EMI payment
+- PUT: Update EMI record
+
+#### [NEW] `app/api/sheets/payments/route.ts`
+- GET: Fetch all outgoing payments
+- POST: Add payment
+- PUT: Update payment
+- DELETE: Delete payment
+
+#### [NEW] `app/api/sheets/details/route.ts`
+- GET: Fetch property details (key-value pairs)
+- PUT: Update property configuration
+
+#### [NEW] `app/api/user/config/route.ts`
+- GET: Check if user has configured spreadsheet
+- POST: Save spreadsheet URL for user (stored in master config sheet)
+
+---
+
+### Phase 4: Spreadsheet Onboarding Flow
+
+#### [NEW] `app/dashboard/onboarding/page.tsx`
+- Beautiful multi-step onboarding wizard:
+  1. **Welcome Step**: Explain how the app works — data stored in YOUR spreadsheet
+  2. **Spreadsheet URL Step**: Input field for Google Spreadsheet URL + validation
+  3. **Permission Step**: Show service account email (`sheets-formatter@excel-492318.iam.gserviceaccount.com`), one-click copy, instructions to grant Editor access
+  4. **Verification Step**: Test connection, auto-create sheets if needed, show success
+- Store config in master sheet via `/api/user/config`
+
+#### [NEW] `components/shared/OnboardingGuard.tsx`
+- Wrapper component for dashboard layout
+- Checks if user has completed spreadsheet onboarding
+- Redirects to onboarding if not configured
+- Shows loading skeleton during check
+
+---
+
+### Phase 5: Rewire Frontend Data Layer
+
+#### [MODIFY] [propertyStore.ts](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/lib/store/propertyStore.ts)
+- Replace all Firestore calls with fetch to `/api/sheets/details`
+
+#### [NEW] `lib/store/borrowStore.ts`
+- Zustand store for borrows/funding sources
+- CRUD operations via `/api/sheets/borrows`
+
+#### [NEW] `lib/store/emiStore.ts`
+- Zustand store for EMI records
+- Operations via `/api/sheets/emis`
+
+#### [NEW] `lib/store/paymentStore.ts`
+- Zustand store for outgoing payments
+- Operations via `/api/sheets/payments`
+
+#### [NEW] `lib/store/spreadsheetStore.ts`
+- Zustand store for spreadsheet config/onboarding state
+- Operations via `/api/user/config`
+
+---
+
+### Phase 6: Update Dashboard & Components
+
+#### [MODIFY] [dashboard/page.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/app/dashboard/page.tsx)
+- Replace Firestore queries with new store calls
+- Use Clerk's `useUser()` for user info
+
+#### [MODIFY] [dashboard/layout.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/app/dashboard/layout.tsx)
+- Remove Firebase auth check, use Clerk
+- Add `OnboardingGuard` wrapper
+
+#### [MODIFY] [TopNav.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/components/layout/TopNav.tsx)
+- Replace Firebase auth display with Clerk's `<UserButton />`
+
+#### [MODIFY] [Sidebar.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/components/layout/Sidebar.tsx)
+- Update navigation links, user display
+
+#### [MODIFY] [page.tsx (landing)](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/app/page.tsx)
+- Update login/register links to `/sign-in` and `/sign-up`
+- Update messaging to reflect Google Sheets trust model
+
+#### [MODIFY] All funding source components
+- [AddFundingSourceDialog.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/components/funding/AddFundingSourceDialog.tsx)
+- [EditFundingSourceDialog.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/components/funding/EditFundingSourceDialog.tsx)
+- [ViewFundingSourceDialog.tsx](file:///d:/Sharpening/purchase-management/purchase-management-webapp/frontend/components/funding/ViewFundingSourceDialog.tsx)
+- Rewire to use new `borrowStore`
+
+#### [MODIFY] Dashboard sub-pages
+- `funding-sources/page.tsx` — Use borrowStore
+- `incoming-payments/page.tsx` — Use emiStore
+- `outgoing-payments/page.tsx` — Use paymentStore
+- `analytics/page.tsx` — Aggregate from all stores
+- `purchase-config/page.tsx` — Use propertyStore (sheets-backed)
+
+---
+
+### Phase 7: Backend Cleanup
+
+#### [DELETE] Entire `backend/` directory
+- No longer needed — all API logic is in Next.js API routes
+- Service account credentials move to frontend `.env.local`
+
+#### [MODIFY] [.gitignore](file:///d:/Sharpening/purchase-management/purchase-management-webapp/.gitignore)
+- Ensure `service-account-key.json` is ignored
+- Add `.env.local` if not already there
+
+#### [NEW] `frontend/.env.local`
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+GOOGLE_SERVICE_ACCOUNT_EMAIL=sheets-formatter@excel-492318.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
+GOOGLE_MASTER_SPREADSHEET_ID=<your-master-config-sheet-id>
+```
+
+---
+
+## Data Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend (Next.js)
+    participant C as Clerk
+    participant API as API Routes
+    participant GS as Google Sheets API
+    participant S as User's Spreadsheet
+
+    U->>F: Visit app
+    F->>C: Check auth
+    C-->>F: Authenticated / Redirect to sign-in
+    
+    Note over F: First time user
+    F->>API: GET /api/user/config
+    API-->>F: No spreadsheet configured
+    F->>U: Show Onboarding Wizard
+    U->>F: Enter spreadsheet URL
+    F->>API: POST /api/sheets/validate
+    API->>GS: Check access to spreadsheet
+    GS->>S: Try to read
+    S-->>GS: Access denied
+    GS-->>API: Error: No access
+    API-->>F: Need permission
+    F->>U: "Grant editor access to sheets-formatter@..."
+    U->>S: Shares with service account
+    U->>F: Retry validation
+    F->>API: POST /api/sheets/validate
+    API->>GS: Check + Create sheets
+    GS->>S: Create Borrows, EMIs, Payments, Details
+    S-->>GS: Success
+    API-->>F: Setup complete!
+    
+    Note over F: Normal usage
+    U->>F: Add new borrow
+    F->>API: POST /api/sheets/borrows
+    API->>GS: Append row to Borrows sheet
+    GS->>S: Write data
+    S-->>GS: OK
+    API-->>F: Borrow added
+    F->>U: Show updated UI
+```
+
+---
+
+## Verification Plan
+
+### Automated Tests
+1. Run `npm run build` — verify no TypeScript/build errors
+2. Run `npm run dev` — verify app starts without crashes
+3. Test Clerk sign-in/sign-up flow in browser
+4. Test spreadsheet onboarding wizard end-to-end
+
+### Manual Verification
+1. **Auth flow**: Sign up → Sign in → Sign out → Protected route redirect
+2. **Onboarding**: Enter spreadsheet URL → Grant permission → Verify setup
+3. **CRUD operations**: Add/edit/delete borrows, EMIs, payments
+4. **Data verification**: Check that data appears correctly in the Google Sheet
+5. **Analytics**: Verify dashboard stats compute from sheet data
+6. **Mobile responsiveness**: Test onboarding + dashboard on mobile viewport
+
+---
+
+## Execution Order
+
+| Phase | Priority | Est. Files Changed | Description |
+|-------|----------|-------------------|-------------|
+| 1 | 🔴 Critical | 2 | Remove Firebase, add dependencies |
+| 2 | 🔴 Critical | 8 | Clerk authentication setup |
+| 3 | 🔴 Critical | 8 | Google Sheets API layer |
+| 4 | 🟡 High | 3 | Spreadsheet onboarding |
+| 5 | 🟡 High | 5 | Rewire data stores |
+| 6 | 🟡 High | 10+ | Update all UI components |
+| 7 | 🟢 Medium | 3 | Backend cleanup |

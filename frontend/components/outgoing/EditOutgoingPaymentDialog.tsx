@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { doc, updateDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-import { useAuthStore } from "@/lib/store/authStore";
+import { usePaymentStore } from "@/lib/store/paymentStore";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +37,7 @@ export default function EditOutgoingPaymentDialog({
   payment,
   onSuccess,
 }: EditOutgoingPaymentDialogProps) {
-  const { user } = useAuthStore();
+  const { updatePayment } = usePaymentStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     category: payment.category,
@@ -70,7 +68,6 @@ export default function EditOutgoingPaymentDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const userId = user?.userId || "dev-user";
 
     try {
       setLoading(true);
@@ -81,24 +78,19 @@ export default function EditOutgoingPaymentDialog({
         return;
       }
 
-      const paymentRef = doc(
-        db,
-        "users",
-        userId,
-        "outgoingPayments",
-        payment.id
-      );
-      await updateDoc(paymentRef, {
+      await updatePayment({
+        id: payment.id,
         category: formData.category,
         description: formData.description,
         amount: amount,
-        paymentDate: Timestamp.fromDate(new Date(formData.paymentDate)),
+        paymentDate: formData.paymentDate,
         status: formData.status,
-        recipientName: formData.recipientName || null,
-        paymentMethod: formData.paymentMethod || null,
-        receiptNumber: formData.receiptNumber || null,
-        notes: formData.notes || null,
-        updatedAt: Timestamp.now(),
+        recipient: formData.recipientName || '',
+        paymentMethod: formData.paymentMethod || '',
+        receiptNumber: formData.receiptNumber || '',
+        notes: formData.notes || '',
+        createdAt: payment.createdAt.toISOString(),
+        updatedAt: new Date().toISOString(),
       });
 
       toast.success("Payment updated successfully");

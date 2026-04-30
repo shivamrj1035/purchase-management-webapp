@@ -34,16 +34,16 @@ app.add_middleware(
 try:
     from routers.users import router as users_router
     app.include_router(users_router, prefix="/api")
-    print("✅ Auth routes loaded")
+    print("[OK] Auth routes loaded")
 except Exception as e:
-    print(f"⚠️ Could not load auth routes: {e}")
+    print(f"[ERROR] Could not load auth routes: {e}")
 
 try:
     from routers.notifications import router as notifications_router
     app.include_router(notifications_router, prefix="/api")
-    print("✅ Notification routes loaded")
+    print("[OK] Notification routes loaded")
 except Exception as e:
-    print(f"⚠️ Could not load notification routes: {e}")
+    print(f"[ERROR] Could not load notification routes: {e}")
 
 # Root endpoint
 @app.get("/")

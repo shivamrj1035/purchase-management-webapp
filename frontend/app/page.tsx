@@ -23,21 +23,21 @@ export default function HomePage() {
             sources, EMI payments, and payments all in one place.
           </p>
           <div className="flex gap-4 justify-center pt-6">
-            <Link href="/login">
+            <Link href="/sign-in">
               <Button
                 size="lg"
                 className="bg-blue-500 hover:bg-blue-600 text-white px-8"
               >
-                Login
+                Sign In
               </Button>
             </Link>
-            <Link href="/register">
+            <Link href="/sign-up">
               <Button
                 size="lg"
                 variant="outline"
                 className="border-slate-700 text-white hover:bg-slate-800 px-8"
               >
-                Register
+                Get Started
               </Button>
             </Link>
           </div>

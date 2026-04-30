@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 import { useAuthStore } from "@/lib/store/authStore";
 import { usePropertyStore } from "@/lib/store/propertyStore";
 import {
@@ -87,44 +85,58 @@ export default function ReportsPage() {
   // Load property details on mount
   useEffect(() => {
     if (user?.userId) {
-      loadPropertyDetails(user.userId);
+      loadPropertyDetails();
     }
   }, [user?.userId, loadPropertyDetails]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const userId = user?.userId || "dev-user";
-
       try {
         setLoading(true);
 
-        // Fetch funding sources
-        const fundingRef = collection(db, "users", userId, "fundingSources");
-        const fundingSnapshot = await getDocs(fundingRef);
-        const funding = fundingSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          startDate: doc.data().startDate?.toDate() || new Date(),
+        // Fetch funding sources (Borrows)
+        const resBorrows = await fetch("/api/sheets/borrows");
+        if (!resBorrows.ok) throw new Error("Failed to fetch funding sources");
+        const dataBorrows = await resBorrows.json();
+        const funding = (dataBorrows.borrows || []).map((b: any) => ({
+          id: b.id,
+          sourceName: b.name,
+          sourceType: b.type,
+          principalAmount: Number(b.principalAmount) || 0,
+          interestRate: Number(b.interestRate) || 0,
+          tenureMonths: Number(b.tenureMonths) || 0,
+          emiAmount: Number(b.emiAmount) || 0,
+          startDate: b.startDate ? new Date(b.startDate) : new Date(),
+          status: b.status,
         })) as FundingSource[];
         setFundingSources(funding);
 
         // Fetch outgoing payments
-        const outgoingRef = collection(db, "users", userId, "outgoingPayments");
-        const outgoingSnapshot = await getDocs(outgoingRef);
-        const outgoing = outgoingSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          paymentDate: doc.data().paymentDate?.toDate() || new Date(),
+        const resPayments = await fetch("/api/sheets/payments");
+        if (!resPayments.ok) throw new Error("Failed to fetch outgoing payments");
+        const dataPayments = await resPayments.json();
+        const outgoing = (dataPayments.payments || []).map((p: any) => ({
+          id: p.id,
+          category: p.category,
+          description: p.description,
+          amount: Number(p.amount) || 0,
+          paymentDate: p.paymentDate ? new Date(p.paymentDate) : new Date(),
+          status: p.status,
         })) as OutgoingPayment[];
         setOutgoingPayments(outgoing);
 
-        // Fetch incoming payments
-        const incomingRef = collection(db, "users", userId, "incomingPayments");
-        const incomingSnapshot = await getDocs(incomingRef);
-        const incoming = incomingSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          paymentDate: doc.data().paymentDate?.toDate() || new Date(),
+        // Fetch incoming payments (EMIs)
+        const resEmis = await fetch("/api/sheets/emis");
+        if (!resEmis.ok) throw new Error("Failed to fetch EMI payments");
+        const dataEmis = await resEmis.json();
+        const incoming = (dataEmis.emis || []).map((e: any) => ({
+          id: e.id,
+          fundingSourceId: e.borrowId,
+          fundingSourceName: e.borrowName,
+          amount: Number(e.amount) || 0,
+          paymentDate: e.paymentDate ? new Date(e.paymentDate) : (e.dueDate ? new Date(e.dueDate) : new Date()),
+          status: e.status,
+          paymentType: e.paymentMethod || "EMI",
         })) as IncomingPayment[];
         setIncomingPayments(incoming);
       } catch (error) {
@@ -135,8 +147,11 @@ export default function ReportsPage() {
       }
     };
 
-    fetchData();
+    if (user?.userId) {
+      fetchData();
+    }
   }, [user]);
+
 
   // Calculate summary statistics
   const purchasePrice = propertyDetails?.purchasePrice || 0;

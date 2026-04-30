@@ -74,11 +74,9 @@ frontend/
 │       ├── ErrorBoundary.tsx
 │       └── EmptyState.tsx
 ├── lib/
-│   ├── firebase/
-│   │   ├── config.ts           # Firebase initialization
+│   ├── clerk/
 │   │   ├── auth.ts             # Auth helpers
-│   │   └── firestore.ts        # Firestore helpers
-│   ├── api/
+│   ├── google-sheets/
 │   │   ├── client.ts           # API client
 │   │   ├── auth.ts             # Auth API calls
 │   │   ├── funding.ts          # Funding API calls

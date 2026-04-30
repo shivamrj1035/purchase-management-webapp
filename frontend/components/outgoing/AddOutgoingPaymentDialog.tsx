@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-import { useAuthStore } from "@/lib/store/authStore";
+import { usePaymentStore } from "@/lib/store/paymentStore";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +34,7 @@ export default function AddOutgoingPaymentDialog({
   onOpenChange,
   onSuccess,
 }: AddOutgoingPaymentDialogProps) {
-  const { user } = useAuthStore();
+  const { addPayment } = usePaymentStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     category: "builder_payment" as
@@ -57,7 +55,6 @@ export default function AddOutgoingPaymentDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const userId = user?.userId || "dev-user";
 
     try {
       setLoading(true);
@@ -73,19 +70,16 @@ export default function AddOutgoingPaymentDialog({
         return;
       }
 
-      const paymentsRef = collection(db, "users", userId, "outgoingPayments");
-      await addDoc(paymentsRef, {
+      await addPayment({
         category: formData.category,
         description: formData.description,
         amount: amount,
-        paymentDate: Timestamp.fromDate(new Date(formData.paymentDate)),
+        paymentDate: formData.paymentDate,
         status: formData.status,
-        recipientName: formData.recipientName || null,
-        paymentMethod: formData.paymentMethod || null,
-        receiptNumber: formData.receiptNumber || null,
-        notes: formData.notes || null,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        recipient: formData.recipientName || '',
+        paymentMethod: formData.paymentMethod || '',
+        receiptNumber: formData.receiptNumber || '',
+        notes: formData.notes || '',
       });
 
       toast.success("Payment added successfully");

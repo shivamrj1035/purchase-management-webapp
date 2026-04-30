@@ -1,17 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  collection,
-  addDoc,
-  Timestamp,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { useEMIStore } from "@/lib/store/emiStore";
+import { useBorrowStore } from "@/lib/store/borrowStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import {
   Dialog,
@@ -41,13 +32,15 @@ interface AddPaymentDialogProps {
   onSuccess: () => void;
 }
 
-export default function AddPaymentDialog({
+export function AddPaymentDialog({
   open,
   onOpenChange,
   fundingSources,
   onSuccess,
 }: AddPaymentDialogProps) {
   const { user } = useAuthStore();
+  const { emis, addEMI } = useEMIStore();
+  const { borrows } = useBorrowStore();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fundingSourceId: "",
@@ -63,40 +56,30 @@ export default function AddPaymentDialog({
   // Calculate next due date when funding source is selected
   useEffect(() => {
     const calculateNextDueDate = async () => {
-      if (!formData.fundingSourceId || !user?.userId) return;
+      if (!formData.fundingSourceId || !user) return;
 
-      const selectedSource = fundingSources.find(
+      const selectedSource = borrows.find(
         (s) => s.id === formData.fundingSourceId
       );
       if (!selectedSource) return;
 
       try {
-        // Get the latest EMI payment for this funding source
-        const emiPaymentsRef = collection(
-          db,
-          "users",
-          user.userId,
-          "emiPayments"
-        );
-        const q = query(
-          emiPaymentsRef,
-          where("fundingSourceId", "==", formData.fundingSourceId),
-          orderBy("dueDate", "desc"),
-          limit(1)
-        );
-        const snapshot = await getDocs(q);
+        // Filter EMIs for this borrow to find the latest one
+        const sourceEmis = [...emis]
+          .filter(e => e.borrowId === formData.fundingSourceId)
+          .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
 
         let nextDueDate = new Date();
 
-        if (!snapshot.empty) {
+        if (sourceEmis.length > 0) {
           // Get the last due date and add 1 month
-          const lastPayment = snapshot.docs[0].data();
-          const lastDueDate = lastPayment.dueDate.toDate();
+          const lastPayment = sourceEmis[0];
+          const lastDueDate = new Date(lastPayment.dueDate);
           nextDueDate = new Date(lastDueDate);
           nextDueDate.setMonth(nextDueDate.getMonth() + 1);
         } else {
           // If no payments exist, use the funding source start date
-          const startDate = selectedSource.startDate?.toDate() || new Date();
+          const startDate = selectedSource.startDate ? new Date(selectedSource.startDate) : new Date();
           nextDueDate = new Date(startDate);
           // Add 1 month to start date
           nextDueDate.setMonth(nextDueDate.getMonth() + 1);
@@ -114,7 +97,7 @@ export default function AddPaymentDialog({
     };
 
     calculateNextDueDate();
-  }, [formData.fundingSourceId, fundingSources, user?.userId]);
+  }, [formData.fundingSourceId, borrows, emis, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,7 +119,7 @@ export default function AddPaymentDialog({
         return;
       }
 
-      const selectedSource = fundingSources.find(
+      const selectedSource = borrows.find(
         (s) => s.id === formData.fundingSourceId
       );
       if (!selectedSource) {
@@ -144,22 +127,29 @@ export default function AddPaymentDialog({
         return;
       }
 
-      const paymentsRef = collection(db, "users", userId, "emiPayments");
-      await addDoc(paymentsRef, {
-        fundingSourceId: formData.fundingSourceId,
-        fundingSourceName: selectedSource.sourceName,
-        dueDate: Timestamp.fromDate(new Date(formData.dueDate)),
+      // Determine next month number
+      const sourceEmis = emis.filter(e => e.borrowId === formData.fundingSourceId);
+      const nextMonthNo = sourceEmis.length > 0 
+        ? Math.max(...sourceEmis.map(e => e.monthNo)) + 1 
+        : 1;
+
+      await addEMI({
+        borrowId: formData.fundingSourceId,
+        borrowName: selectedSource.name,
+        monthNo: nextMonthNo,
+        dueDate: new Date(formData.dueDate).toISOString(),
         amount: amount,
         status: formData.status,
         paymentDate:
           formData.status === "paid"
-            ? Timestamp.fromDate(new Date(formData.paymentDate))
-            : null,
-        paymentMethod: formData.paymentMethod || null,
-        transactionId: formData.transactionId || null,
-        notes: formData.notes || null,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+            ? new Date(formData.paymentDate).toISOString()
+            : "",
+        paymentMethod: formData.paymentMethod || "",
+        transactionId: formData.transactionId || "",
+        notes: formData.notes || "",
+        principalPaid: 0,
+        interestPaid: 0,
+        remainingBalance: 0,
       });
 
       toast.success("Payment recorded successfully");
@@ -211,11 +201,11 @@ export default function AddPaymentDialog({
                 <SelectValue placeholder="Select funding source" />
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                {fundingSources
-                  .filter((s) => s.sourceType === "bank_loan")
+                {borrows
+                  .filter((s) => s.type === "bank_loan" || s.type === "personal_loan")
                   .map((source) => (
                     <SelectItem key={source.id} value={source.id}>
-                      {source.sourceName}
+                      {source.name}
                     </SelectItem>
                   ))}
               </SelectContent>

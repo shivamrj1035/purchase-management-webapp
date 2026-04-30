@@ -1,16 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  Timestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import { usePaymentStore } from "@/lib/store/paymentStore";
 import { useAuthStore } from "@/lib/store/authStore";
 import { usePropertyStore } from "@/lib/store/propertyStore";
 import { Button } from "@/components/ui/button";
@@ -37,77 +28,54 @@ import { formatCurrency, formatDate } from "@/lib/utils/emiCalculator";
 import { OutgoingPayment } from "@/lib/types/payment";
 import AddOutgoingPaymentDialog from "@/components/outgoing/AddOutgoingPaymentDialog";
 import EditOutgoingPaymentDialog from "@/components/outgoing/EditOutgoingPaymentDialog";
-import { ConfigurationAlert } from "@/components/shared/ConfigurationAlert";
 
 export default function OutgoingPaymentsPage() {
   const { user } = useAuthStore();
   const { propertyDetails, loadPropertyDetails, getTotalCost } =
     usePropertyStore();
-  const [payments, setPayments] = useState<OutgoingPayment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { payments: storePayments, loading, loadPayments, deletePayment } = usePaymentStore();
   const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] =
     useState<OutgoingPayment | null>(null);
 
-  // Load property details on mount
   useEffect(() => {
     if (user?.userId) {
       loadPropertyDetails(user.userId);
     }
   }, [user?.userId, loadPropertyDetails]);
 
-  const fetchPayments = async () => {
-    const userId = user?.userId || "dev-user";
-
-    try {
-      setLoading(true);
-      const paymentsRef = collection(db, "users", userId, "outgoingPayments");
-      const snapshot = await getDocs(paymentsRef);
-
-      const paymentsData: OutgoingPayment[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          category: data.category,
-          description: data.description,
-          amount: data.amount,
-          paymentDate: data.paymentDate?.toDate() || new Date(),
-          status: data.status,
-          recipientName: data.recipientName,
-          paymentMethod: data.paymentMethod,
-          receiptNumber: data.receiptNumber,
-          notes: data.notes,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-        };
-      });
-
-      setPayments(paymentsData);
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-      toast.error("Failed to load payments");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchPayments();
-  }, [user]);
+    loadPayments();
+  }, [loadPayments]);
+
+  const fetchPayments = () => loadPayments();
+
+  // Map from PaymentRow to OutgoingPayment for UI compatibility
+  const payments: OutgoingPayment[] = storePayments.map((p) => ({
+    id: p.id,
+    category: p.category as OutgoingPayment["category"],
+    description: p.description,
+    amount: p.amount,
+    paymentDate: new Date(p.paymentDate || Date.now()),
+    status: p.status as "paid" | "pending",
+    recipientName: p.recipient,
+    paymentMethod: p.paymentMethod as OutgoingPayment["paymentMethod"],
+    receiptNumber: p.receiptNumber,
+    notes: p.notes,
+    createdAt: new Date(p.createdAt || Date.now()),
+    updatedAt: new Date(p.updatedAt || Date.now()),
+  }));
 
   const handleDelete = async (paymentId: string) => {
-    const userId = user?.userId || "dev-user";
-
     if (!confirm("Are you sure you want to delete this payment?")) {
       return;
     }
 
     try {
-      await deleteDoc(doc(db, "users", userId, "outgoingPayments", paymentId));
+      await deletePayment(paymentId);
       toast.success("Payment deleted successfully");
-      fetchPayments();
     } catch (error) {
       console.error("Error deleting payment:", error);
       toast.error("Failed to delete payment");
@@ -161,8 +129,6 @@ export default function OutgoingPaymentsPage() {
 
   return (
     <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
-      {/* Configuration Alert */}
-      <ConfigurationAlert />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>

@@ -183,7 +183,7 @@ export function SendNotificationDialog({
 
       const result = await response.json();
 
-      // Create notification trigger record in Firestore
+      // Create notification trigger record in Google Sheets
       await createTrigger(user.userId, {
         emiPaymentIds: selectedEMIs.map((emi) => emi.id),
         scheduledFor: new Date(),
