@@ -196,7 +196,7 @@ export default function HomePage() {
                 Join thousands of users managing their home buying journey with
                 ease
               </p>
-              <Link href="/register">
+              <Link href="/sign-up">
                 <Button
                   size="lg"
                   className="bg-blue-500 hover:bg-blue-600 text-white px-12"

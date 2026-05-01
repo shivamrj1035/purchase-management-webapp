@@ -1,212 +1,36 @@
-# Enhanced Home Buying & Finance Management Platform
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A comprehensive, single-page web application for managing the entire home buying financial journey. Track funding sources, EMI payments, builder payments, and analyze complete financial metrics with advanced filtering and reporting.
+## Getting Started
 
-## 🎯 Project Overview
-
-This platform helps users manage:
-
-- **Funding Sources**: Track loans from banks, personal contributions, and organizational loans
-- **EMI Payments**: Monitor and schedule all EMI payments with automated reminders
-- **Outgoing Payments**: Record payments to builders, valuations, document fees, stamp duty, etc.
-- **Analytics**: Comprehensive financial insights with charts and reports
-- **Automated Reminders**: Email notifications for upcoming payments
-
-## 🛠️ Technology Stack
-
-### Frontend
-
-- **Framework**: Next.js 14 with TypeScript
-- **Styling**: Tailwind CSS (Dark Theme)
-- **UI Components**: shadcn/ui
-- **State Management**: Zustand
-- **Charts**: Recharts
-- **Tables**: TanStack Table (React Table)
-- **Animations**: Framer Motion
-
-### Backend
-
-- **Framework**: FastAPI (Python)
-- **Authentication**: JWT
-- **Email**: SendGrid
-- **Scheduling**: APScheduler
-- **Validation**: Pydantic
-
-### Database
-
-- **Primary**: Cloud Firestore (Firebase)
-- **Real-time Sync**: Firestore listeners
-
-## 📁 Project Structure
-
-```
-housing-management/
-├── frontend/                 # Next.js application
-│   ├── app/                 # Next.js 14 app directory
-│   │   ├── auth/           # Authentication pages
-│   │   ├── dashboard/      # Main dashboard & features
-│   │   └── components/     # Reusable components
-│   ├── lib/                # Utilities & helpers
-│   ├── styles/             # Global styles
-│   └── public/             # Static assets
-├── backend/                 # FastAPI application
-│   ├── api/                # API routes
-│   ├── models/             # Pydantic models
-│   ├── services/           # Business logic
-│   ├── utils/              # Helper functions
-│   └── main.py             # Application entry
-├── docs/                    # Documentation
-│   ├── 01-SETUP-GUIDE.md
-│   ├── 02-DATABASE-SCHEMA.md
-│   ├── 03-API-DOCUMENTATION.md
-│   ├── 04-FRONTEND-GUIDE.md
-│   ├── 05-DEPLOYMENT.md
-│   └── 06-FEATURES.md
-└── README.md               # This file
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+ and npm/yarn
-- Python 3.9+
-- Firebase account
-- SendGrid account (for emails)
-
-### Installation
-
-1. **Clone the repository**
+First, run the development server:
 
 ```bash
-git clone <repository-url>
-cd housing-management
-```
-
-2. **Frontend Setup**
-
-```bash
-cd frontend
-npm install
-cp .env.example .env.local
-# Configure your environment variables
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-3. **Backend Setup**
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-# Configure your environment variables
-uvicorn main:app --reload
-```
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## 📚 Documentation
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-Detailed documentation is available in the `docs/` folder:
+## Learn More
 
-1. **[Setup Guide](./docs/01-SETUP-GUIDE.md)** - Complete setup instructions
-2. **[Database Schema](./docs/02-DATABASE-SCHEMA.md)** - Firestore data models
-3. **[API Documentation](./docs/03-API-DOCUMENTATION.md)** - Backend API reference
-4. **[Frontend Guide](./docs/04-FRONTEND-GUIDE.md)** - Component architecture
-5. **[Deployment](./docs/05-DEPLOYMENT.md)** - Production deployment guide
-6. **[Features](./docs/06-FEATURES.md)** - Detailed feature documentation
+To learn more about Next.js, take a look at the following resources:
 
-## 🎨 Design System
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-### Dark Theme Colors
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-- **Primary Dark**: #0F172A (Slate-900)
-- **Secondary Dark**: #1E293B (Slate-800)
-- **Accent**: #3B82F6 (Blue-500)
-- **Success**: #10B981 (Emerald-500)
-- **Warning**: #F59E0B (Amber-500)
-- **Danger**: #EF4444 (Red-500)
+## Deploy on Vercel
 
-## 🔑 Key Features
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-### 1. Dashboard
-
-- Total Funding Summary
-- Total Outgoing Payments
-- Financial Overview with Net Position
-- Quick action buttons
-
-### 2. Funding Sources Management
-
-- Add/Edit/Delete funding sources
-- Amortization schedule tracking
-- EMI payment recording
-- Document management
-
-### 3. Outgoing Payments
-
-- Track all payments (builder, fees, duties)
-- Categorized payment types
-- Receipt uploads
-- Payment timeline
-
-### 4. Analytics
-
-- Interest analysis and breakdown
-- Loan-wise summaries
-- Payment method analysis
-- Timeline visualizations
-
-### 5. Reports & Export
-
-- Financial summary reports
-- Payment history
-- CSV/PDF export
-- Custom date ranges
-
-### 6. Automated Reminders
-
-- Email notifications for upcoming EMIs
-- Configurable reminder settings
-- Multi-recipient support
-
-## 🔐 Security
-
-- JWT-based authentication
-- Secure password hashing
-- Email verification
-- Token refresh mechanism
-- CORS protection
-- Environment variable management
-
-## 📱 Mobile Responsive
-
-Fully responsive design that works seamlessly on:
-
-- Desktop (1920px+)
-- Laptop (1024px - 1919px)
-- Tablet (768px - 1023px)
-- Mobile (320px - 767px)
-
-## 🚢 Deployment
-
-- **Frontend**: Vercel with GitHub auto-deploy
-- **Backend**: Render or Railway
-- **Database**: Firebase (Cloud Firestore)
-- **Email**: SendGrid
-
-## 📄 License
-
-MIT License - See LICENSE file for details
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read the contributing guidelines before submitting PRs.
-
-## 📧 Support
-
-For issues and questions, please create an issue in the repository.
-
----
-
-**Built with ❤️ for simplifying home buying financial management**
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
